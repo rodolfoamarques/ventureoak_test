@@ -9,6 +9,9 @@
     "test": "node node_modules/lab/bin/lab -cv",
     "start": "node ."
   },
+  "dependencies": {
+    "hapi": "^16.1.0"
+  },
   "devDependencies": {
     "code": "^4.0.0",
     "lab": "^12.1.0"
