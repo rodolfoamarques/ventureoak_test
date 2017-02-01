@@ -4,5 +4,13 @@
   "description": "Pig Latin RESTful Translator API",
   "author": "Rodolfo Marques",
   "license": "MIT",
-  "main": "index.js"
+  "main": "index.js",
+  "scripts": {
+    "test": "node node_modules/lab/bin/lab -cv",
+    "start": "node ."
+  },
+  "devDependencies": {
+    "code": "^4.0.0",
+    "lab": "^12.1.0"
+  }
 }
