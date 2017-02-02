@@ -10,7 +10,13 @@
     "start": "node ."
   },
   "dependencies": {
-    "hapi": "^16.1.0"
+    "hapi": "^16.1.0",
+    "hapi-auth-jwt2": "^7.2.4",
+    "hapi-route-acl": "^1.0.3",
+    "hapi-swaggered": "^2.7.0",
+    "hapi-swaggered-ui": "^2.5.1",
+    "inert": "^4.1.0",
+    "vision": "^4.1.1"
   },
   "devDependencies": {
     "code": "^4.0.0",
