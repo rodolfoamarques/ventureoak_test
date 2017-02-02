@@ -1,0 +1,38 @@
+{
+  "development": {
+    "username": "root",
+    "password": "root_pass",
+    "database": "ventureoak_dev",
+    "host": "127.0.0.1",
+    "dialect": "postgres",
+    "define": {
+      "paranoid": true,
+      "underscored": true,
+      "underscoredAll": true
+    }
+  },
+  "test": {
+    "username": "root",
+    "password": "root_pass",
+    "database": "ventureoak_dev",
+    "host": "127.0.0.1",
+    "dialect": "postgres",
+    "define": {
+      "paranoid": true,
+      "underscored": true,
+      "underscoredAll": true
+    }
+  },
+  "production": {
+    "username": "root",
+    "password": "root_pass",
+    "database": "ventureoak_prod",
+    "host": "127.0.0.1",
+    "dialect": "postgres",
+    "define": {
+      "paranoid": true,
+      "underscored": true,
+      "underscoredAll": true
+    }
+  }
+}
