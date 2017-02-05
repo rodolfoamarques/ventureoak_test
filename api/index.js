@@ -4,6 +4,7 @@ let api;
 
 var Promise = require("bluebird");
 var db = require( '../database/models' );
+const configs = require( '../config/configs' );
 
 
 exports.init = ( server ) => {
@@ -73,7 +74,7 @@ exports.init = ( server ) => {
 
       // Setting the authorization strategy
       api.auth.strategy( 'jwt', 'jwt', {
-        key: 'thisisarandomkey',
+        key: configs.api_secret_key,
         validateFunc: (decoded, request, callback) => {
           db.User.findById( decoded.id )
           .then( user => {

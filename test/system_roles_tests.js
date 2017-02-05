@@ -2,6 +2,8 @@
 
 var Lab = require( 'lab' );
 var code = require( 'code' );
+var moment = require( 'moment' );
+
 var db = require( '../database/models' );
 
 const lab = exports.lab = Lab.script();
@@ -206,7 +208,7 @@ lab.experiment( 'Roles Endpoint', function() {
   // Test scenario to create a new role in the database with forbidden keys
   lab.test( 'POST new role with forbidden keys - part 1 (forbidden: created_at)', function( done ) {
 
-    sample_role.created_at = new Date();
+    sample_role.created_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -233,7 +235,7 @@ lab.experiment( 'Roles Endpoint', function() {
   // Test scenario to create a new role in the database with forbidden keys
   lab.test( 'POST new role with forbidden keys - part 2 (forbidden: updated_at)', function( done ) {
 
-    sample_role.updated_at = new Date();
+    sample_role.updated_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -260,7 +262,7 @@ lab.experiment( 'Roles Endpoint', function() {
   // Test scenario to create a new role in the database with forbidden keys
   lab.test( 'POST new role with forbidden keys - part 3 (forbidden: deleted_at)', function( done ) {
 
-    sample_role.deleted_at = new Date();
+    sample_role.deleted_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -495,7 +497,7 @@ lab.experiment( 'Roles Endpoint', function() {
     db.SystemRole.create( sample_role )
     .then( role => {
 
-      updated_role.created_at = new Date();
+      updated_role.created_at = moment();
       var options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
@@ -530,7 +532,7 @@ lab.experiment( 'Roles Endpoint', function() {
     db.SystemRole.create( sample_role )
     .then( role => {
 
-      updated_role.updated_at = new Date();
+      updated_role.updated_at = moment();
       var options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
@@ -565,7 +567,7 @@ lab.experiment( 'Roles Endpoint', function() {
     db.SystemRole.create( sample_role )
     .then( role => {
 
-      updated_role.deleted_at = new Date();
+      updated_role.deleted_at = moment();
       var options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,

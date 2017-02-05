@@ -3,6 +3,8 @@
 var Lab = require( 'lab' );
 var code = require( 'code' );
 var bcrypt = require( 'bcrypt' );
+var moment = require( 'moment' );
+
 var db = require( '../database/models' );
 
 const lab = exports.lab = Lab.script();
@@ -271,7 +273,7 @@ lab.experiment( 'Users Endpoint', function() {
   // Test scenario to create a new user in the database with forbidden keys
   lab.test( 'POST new user with forbidden keys - part 3 (forbidden: last_login_at)', function( done ) {
 
-    sample_user.last_login_at = new Date();
+    sample_user.last_login_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -298,7 +300,7 @@ lab.experiment( 'Users Endpoint', function() {
   // Test scenario to create a new user in the database with forbidden keys
   lab.test( 'POST new user with forbidden keys - part 2 (forbidden: created_at)', function( done ) {
 
-    sample_user.created_at = new Date();
+    sample_user.created_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -325,7 +327,7 @@ lab.experiment( 'Users Endpoint', function() {
   // Test scenario to create a new user in the database with forbidden keys
   lab.test( 'POST new user with forbidden keys - part 3 (forbidden: updated_at)', function( done ) {
 
-    sample_user.updated_at = new Date();
+    sample_user.updated_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -352,7 +354,7 @@ lab.experiment( 'Users Endpoint', function() {
   // Test scenario to create a new user in the database with forbidden keys
   lab.test( 'POST new user with forbidden keys - part 4 (forbidden: deleted_at)', function( done ) {
 
-    sample_user.deleted_at = new Date();
+    sample_user.deleted_at = moment();
     var options = {
       method: 'POST',
       url: baseRoute,
@@ -982,7 +984,7 @@ lab.experiment( 'Users Endpoint', function() {
     db.User.create( sample_user )
     .then( user => {
 
-      updated_user.created_at = new Date();
+      updated_user.created_at = moment();
       var options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
@@ -1016,7 +1018,7 @@ lab.experiment( 'Users Endpoint', function() {
     // create a test user
     db.User.create( sample_user )
     .then( user => {
-      updated_user.updated_at = new Date();
+      updated_user.updated_at = moment();
 
       var options = {
         method: 'PUT',
@@ -1051,7 +1053,7 @@ lab.experiment( 'Users Endpoint', function() {
     // create a test user
     db.User.create( sample_user )
     .then( user => {
-      updated_user.deleted_at = new Date();
+      updated_user.deleted_at = moment();
 
       var options = {
         method: 'PUT',
