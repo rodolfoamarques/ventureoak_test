@@ -10,6 +10,7 @@
     "start": "node ."
   },
   "dependencies": {
+    "bcrypt": "^1.0.2",
     "bluebird": "^3.4.7",
     "boom": "^4.2.0",
     "hapi": "^16.1.0",
