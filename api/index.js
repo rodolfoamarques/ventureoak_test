@@ -2,6 +2,9 @@
 
 let api;
 
+var Promise = require("bluebird");
+var db = require( '../database/models' );
+
 
 exports.init = ( server ) => {
 
@@ -25,6 +28,7 @@ exports.init = ( server ) => {
         register: require( 'hapi-swaggered' ),
         options: {
           schemes: ['http'],
+          stripPrefix: '/api',
           auth: false
         }
       },
@@ -36,7 +40,7 @@ exports.init = ( server ) => {
           authorization: {
             field: 'authorization',
             scope: 'header',
-            defaultValue: 'demoKey',
+            // defaultValue: 'defaultKey',
             placeholder: 'Enter your apiKey here'
           },
           swaggerOptions: {
@@ -49,9 +53,17 @@ exports.init = ( server ) => {
         options: {
           permissionsFunc: (credentials, callback) => {
             if( credentials ) {
-              // TODO: handle "has credentials" scenario
+              return db.SystemRole.scope(['withPermissions'])
+                .findById( credentials.role_id )
+                .then( role => {
+                  if( !role ) {
+                    return callback( new Error('role_id_not_found'), null );
+                  }
+                  return callback( null, role.permissions );
+                });
             } else {
-              // TODO: handle "no credentials" scenario
+              // TODO: THIS IS PROBABLY TOO RESTRICTIVE.
+              return callback( null, {} );
             }
           }
         }
@@ -63,7 +75,15 @@ exports.init = ( server ) => {
       api.auth.strategy( 'jwt', 'jwt', {
         key: 'thisisarandomkey',
         validateFunc: (decoded, request, callback) => {
-          // TODO
+          db.User.findById( decoded.id )
+          .then( user => {
+            if( !user ) {
+              return Promise.reject();
+            } else {
+              return callback( null, true, user.toJSON() );
+            }
+          })
+          .catch( () => callback(new Error('error_found_in_jwt_validate_function'), false) )
         },
         verifyOptions: { algorithms: ['HS256'] }
       });
