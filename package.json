@@ -10,12 +10,15 @@
     "start": "node ."
   },
   "dependencies": {
+    "bluebird": "^3.4.7",
+    "boom": "^4.2.0",
     "hapi": "^16.1.0",
     "hapi-auth-jwt2": "^7.2.4",
     "hapi-route-acl": "^1.0.3",
     "hapi-swaggered": "^2.7.0",
     "hapi-swaggered-ui": "^2.5.1",
     "inert": "^4.1.0",
+    "joi": "^10.2.1",
     "pg": "^6.1.2",
     "sequelize": "^3.30.1",
     "vision": "^4.1.1"
