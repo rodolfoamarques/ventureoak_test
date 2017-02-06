@@ -13,11 +13,13 @@ const baseRoute = '/system_roles';
 
 lab.experiment( 'Roles Endpoint', function() {
 
-  var way_over_highest_role_id;
+  var auth_tokens = {};
+
   var sample_role = {
     name: 'sample_role',
     permissions: '{ "some_route": { "create": true, "readAll": true, "readOne": true, "update": true, "destroy": true } }'
   };
+
   var updated_role = {
     name: 'updated_role',
     permissions: '{ "other_route": { "create": true, "readAll": true, "readOne": true, "update": true, "destroy": true } }'
@@ -27,10 +29,66 @@ lab.experiment( 'Roles Endpoint', function() {
   // Run before the first test
   lab.before( done => {
 
-    db.SystemRole.count()
-    .then( reply => {
-      way_over_highest_role_id = reply*999+9999;
-      done();
+    let login_info = {
+      super_admin: {
+        email: 'demo1@mail.com',
+        password: 'password'
+      },
+      admin: {
+        email: 'demo2@mail.com',
+        password: 'password'
+      },
+      user: {
+        email: 'demo3@mail.com',
+        password: 'password'
+      }
+    };
+
+    let options = {
+      method: 'POST',
+      url: '/authentication/login'
+    };
+
+    // perform login with super_admin user to get authorization token
+    options.payload = login_info.super_admin;
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      auth_tokens.super_admin = result.token;
+    });
+
+    // perform login with admin user to get authorization token
+    options.payload = login_info.admin;
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      auth_tokens.admin = result.token;
+    });
+
+    // perform login with user user to get authorization token
+    options.payload = login_info.user;
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      auth_tokens.user = result.token;
+
+      // done() callback is required to end the test.
+      server.stop( done );
     });
 
   });
@@ -49,30 +107,107 @@ lab.experiment( 'Roles Endpoint', function() {
 
 
   // Test scenario to get all roles in the database
-  lab.test( 'GET all roles', function( done ) {
+  lab.test( 'GET all roles - no authorization header', function( done ) {
 
-    // get all roles from database
-    db.SystemRole.scope(['withPermissions']).findAll()
-    .then( roles => {
+    let options = {
+      method: 'GET',
+      url: baseRoute
+    }
 
-      var options = {
-        method: 'GET',
-        url: baseRoute
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get all roles in the database
+  lab.test( 'GET all roles - invalid authorization token', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute,
+      headers: {
+        authorization: 'this_is_an_invalid_token'
       }
+    }
 
-      // server.inject allows a simulation of an http request
-      server.inject( options, function( response ) {
-        var result = response.result;
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
-        // Expect http response status code to be 200 ("Ok")
-        code.expect( response.statusCode ).to.be.equal( 200 );
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
 
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get all roles in the database
+  lab.test( 'GET all roles - unauthorized user', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute,
+      headers: {
+        authorization: auth_tokens.user
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get all roles in the database
+  lab.test( 'GET all roles - authorized user', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      // get all roles from database
+      db.SystemRole.scope([ 'withPermissions' ]).findAll()
+      .then( roles => {
         // Expect result length to be equal to the database reply length
         code.expect( result.length ).to.be.equal( roles.length );
 
-        for( var i=0; i<result.length; i++ ) {
-          var role = roles[i].toJSON();
-          var res = result[i].toJSON();
+        for( let i=0; i<result.length; i++ ) {
+          let role = roles[i].toJSON();
+          let res = result[i].toJSON();
 
           // Expect each role in result to be equal to each role in the database reply
           code.expect( res ).to.be.equal( role );
@@ -93,25 +228,28 @@ lab.experiment( 'Roles Endpoint', function() {
     db.SystemRole.create( sample_role )
     .then( created_role => {
 
-      db.SystemRole.scope([ 'withPermissions' ]).findById( created_role.id )
-      .then( role => {
-
-        var options = {
-          method: 'GET',
-          url: baseRoute + '/' + created_role.id
+      let options = {
+        method: 'GET',
+        url: baseRoute + '/' + created_role.id,
+        headers: {
+          authorization: auth_tokens.admin
         }
+      }
 
-        // server.inject allows a simulation of an http request
-        server.inject( options, function( response ) {
-          var result = response.result.toJSON();
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result.toJSON();
 
-          // Expect http response status code to be 200 ("Ok")
-          code.expect( response.statusCode ).to.be.equal( 200 );
+        // Expect http response status code to be 200 ("Ok")
+        code.expect( response.statusCode ).to.be.equal( 200 );
+
+        db.SystemRole.scope([ 'withPermissions' ]).findById( created_role.id )
+        .then( role => {
           // Expect result to be equal to database reply
           code.expect( result ).to.be.equal( role.toJSON() );
 
           // destroy the test role
-          created_role.destroy();
+          role.destroy();
 
           // done() callback is required to end the test.
           server.stop( done );
@@ -122,17 +260,20 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to get an role that does not exist in the database
-  lab.test( 'GET non-existing role', function( done ) {
+  // Test scenario to get a specific role from the database
+  lab.test( 'GET specific role - non-existing role', function( done ) {
 
-    var options = {
+    let options = {
       method: 'GET',
-      url: baseRoute + '/' + way_over_highest_role_id
+      url: baseRoute + '/124124124124124124',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 404 ("Not Found")
       code.expect( response.statusCode ).to.be.equal( 404 );
@@ -145,17 +286,46 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to get an entry with a negative id from the database
-  lab.test( 'GET negative ID role', function( done ) {
+  // Test scenario to get a specific role from the database
+  lab.test( 'GET specific role - zero ID role', function( done ) {
 
-    var options = {
+    let options = {
       method: 'GET',
-      url: baseRoute + '/-1'
+      url: baseRoute + '/0',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get a specific role from the database
+  lab.test( 'GET specific role - negative ID role', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute + '/-1',
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -169,9 +339,9 @@ lab.experiment( 'Roles Endpoint', function() {
 
 
   // Test scenario to create a new role in the database
-  lab.test( 'POST new role', function( done ) {
+  lab.test( 'POST new role - no authorization header', function( done ) {
 
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
       payload: sample_role
@@ -179,7 +349,88 @@ lab.experiment( 'Roles Endpoint', function() {
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result.toJSON();
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - invalid authorization token', function( done ) {
+
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_role,
+      headers: {
+        authorization: 'this_is_an_invalid_token'
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - unauthorized role', function( done ) {
+
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.user
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - authorized role', function( done ) {
+
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result.toJSON();
       delete result.created_at;
       delete result.updated_at;
       delete result.deleted_at;
@@ -190,7 +441,6 @@ lab.experiment( 'Roles Endpoint', function() {
       // get created role from database
       db.SystemRole.scope([ 'withPermissions' ]).findById( result.id )
       .then( role => {
-
         // Expect database reply to be equal to result
         code.expect( role.toJSON() ).to.be.equal( result );
 
@@ -205,19 +455,52 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with forbidden keys
-  lab.test( 'POST new role with forbidden keys - part 1 (forbidden: created_at)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - forbidden key (id)', function( done ) {
 
-    sample_role.created_at = moment();
-    var options = {
+    sample_role.id = 10;
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      delete sample_role.id;
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - forbidden key (created_at)', function( done ) {
+
+    sample_role.created_at = moment();
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -232,19 +515,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with forbidden keys
-  lab.test( 'POST new role with forbidden keys - part 2 (forbidden: updated_at)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - forbidden key (updated_at)', function( done ) {
 
     sample_role.updated_at = moment();
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -259,19 +545,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with forbidden keys
-  lab.test( 'POST new role with forbidden keys - part 3 (forbidden: deleted_at)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - forbidden key (deleted_at)', function( done ) {
 
     sample_role.deleted_at = moment();
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -286,19 +575,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with inexistent keys in the model
-  lab.test( 'POST new role with extra information (extra: non_existing_key)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - extra key (non_existing_key)', function( done ) {
 
     sample_role.non_existing_key = 'dummy value';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -313,19 +605,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with required parameters missing
-  lab.test( 'POST new role with missing data - part 1 (name missing)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - missing key (name)', function( done ) {
 
     delete sample_role.name;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -340,19 +635,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with required parameters missing
-  lab.test( 'POST new role with missing data - part 2 (permissions missing)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - missing key (permissions)', function( done ) {
 
     delete sample_role.permissions;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -367,19 +665,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with invalid values
-  lab.test( 'POST new role with invalid data - part 1.0 (name must be a string)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - invalid data (name must be a string)', function( done ) {
 
     sample_role.name = true;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -394,19 +695,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with invalid values
-  lab.test( 'POST new role with invalid data - part 1.1 (name must be a unique)', function( done ) {
+  // Test scenario to create a new role in the database
+  lab.test( 'POST new role - invalid data (name must be a unique)', function( done ) {
 
     sample_role.name = 'user';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -421,19 +725,22 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 /*
-  // Test scenario to create a new role in the database with invalid values
+  // Test scenario to create a new role in the database
   lab.test( 'POST new role with invalid data - part 2 (permissions must be a valid json object)', function( done ) {
 
-    sample_role.permissions = '';
-    var options = {
+    sample_role.permissions = '?????';
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_role
+      payload: sample_role,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -449,13 +756,13 @@ lab.experiment( 'Roles Endpoint', function() {
 */
 
   // Test scenario to update an existing role in the database
-  lab.test( 'PUT to existing role', function( done ) {
+  lab.test( 'PUT to existing role - no authorization header', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
         payload: updated_role
@@ -463,7 +770,112 @@ lab.experiment( 'Roles Endpoint', function() {
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result.toJSON();
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the role created with POST
+        role.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - invalid authorization token', function( done ) {
+
+    // create a test role
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + role.id,
+        payload: updated_role,
+        headers: {
+          authorization: 'this_is_an_invalid_token'
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the role created with POST
+        role.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - unauthorized role', function( done ) {
+
+    // create a test role
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + role.id,
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.user
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the role created with POST
+        role.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - authorized role', function( done ) {
+
+    // create a test role
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + role.id,
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result.toJSON();
         delete result.created_at;
         delete result.updated_at;
         delete result.deleted_at;
@@ -474,7 +886,6 @@ lab.experiment( 'Roles Endpoint', function() {
         // get updated role from database
         db.SystemRole.scope([ 'withPermissions' ]).findById( result.id )
         .then( u_role => {
-
           // Expect database reply to be equal to result
           code.expect( u_role.toJSON() ).to.be.equal( result );
 
@@ -490,23 +901,64 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with forbidden keys
-  lab.test( 'PUT to existing role with forbidden keys - part 1 (forbidden: created_at)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - forbidden key (id)', function( done ) {
+
+    // create a test role
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      updated_role.id = 10;
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + role.id,
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 400 ("Bad Request")
+        code.expect( response.statusCode ).to.be.equal( 400 );
+        code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+        // destroy the test role
+        role.destroy();
+
+        delete updated_role.id;
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - forbidden key (created_at)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.created_at = moment();
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -525,23 +977,26 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with forbidden keys
-  lab.test( 'PUT to existing role with forbidden keys - part 2 (forbidden: updated_at)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - forbidden key (updated_at)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.updated_at = moment();
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -560,23 +1015,26 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with forbidden keys
-  lab.test( 'PUT to existing role with forbidden keys - part 3 (forbidden: deleted_at)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - forbidden key (deleted_at)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.deleted_at = moment();
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -595,23 +1053,26 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with inexistent keys in the model
-  lab.test( 'PUT to existing role with extra information (extra: non_existing_key)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - extra key (non_existing_key)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.non_existing_key = 'dummy value';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -630,23 +1091,26 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with invalid values
-  lab.test( 'PUT to existing role with invalid data - part 1.0 (name must be a string)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - invalid data (name must be a string)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.name = 10;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -665,23 +1129,26 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to create a new role in the database with invalid values
-  lab.test( 'PUT to existing role with invalid data - part 1.1 (name must be unique)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - invalid data (name must be unique)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.name = 'admin';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -700,23 +1167,26 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 /*
-  // Test scenario to create a new role in the database with invalid values
-  lab.test( 'PUT to existing role with invalid data - part 2 (permissions must be a valid json object)', function( done ) {
+  // Test scenario to update an existing role in the database
+  lab.test( 'PUT to existing role - invalid data (permissions must be a valid json object)', function( done ) {
 
     // create a test role
     db.SystemRole.create( sample_role )
     .then( role => {
 
       updated_role.permissions = '';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + role.id,
-        payload: updated_role
+        payload: updated_role,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -736,19 +1206,118 @@ lab.experiment( 'Roles Endpoint', function() {
 */
 
   // Test scenario to delete a specific role from the database
-  lab.test( 'DELETE specific role', function( done ) {
+  lab.test( 'DELETE specific role - no authorization header', function( done ) {
 
     db.SystemRole.create( sample_role )
     .then( role => {
 
-      var options = {
+      let options = {
         method: 'DELETE',
         url: baseRoute + '/' + role.id
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the test role
+        role.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to delete a specific role from the database
+  lab.test( 'DELETE specific role - invalid authorization token', function( done ) {
+
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      let options = {
+        method: 'DELETE',
+        url: baseRoute + '/' + role.id,
+        headers: {
+          authorization: 'this_is_an_invalid_token'
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the test role
+        role.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to delete a specific role from the database
+  lab.test( 'DELETE specific role - unauthorized role', function( done ) {
+
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      let options = {
+        method: 'DELETE',
+        url: baseRoute + '/' + role.id,
+        headers: {
+          authorization: auth_tokens.user
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the test role
+        role.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to delete a specific role from the database
+  lab.test( 'DELETE specific role - authorized role', function( done ) {
+
+    db.SystemRole.create( sample_role )
+    .then( role => {
+
+      let options = {
+        method: 'DELETE',
+        url: baseRoute + '/' + role.id,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
 
         // Expect http response status code to be 200 ("Ok")
         code.expect( response.statusCode ).to.be.equal( 200 );
@@ -768,17 +1337,20 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to delete an role that does not exist in the database
-  lab.test( 'DELETE non-existing role', function( done ) {
+  // Test scenario to delete a specific role from the database
+  lab.test( 'DELETE specific role - non-existing role', function( done ) {
 
-    var options = {
+    let options = {
       method: 'DELETE',
-      url: baseRoute + '/' + way_over_highest_role_id
+      url: baseRoute + '/124124124124124124',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 404 ("Not Found")
       code.expect( response.statusCode ).to.be.equal( 404 );
@@ -791,17 +1363,46 @@ lab.experiment( 'Roles Endpoint', function() {
   });
 
 
-  // Test scenario to delete an entry with a negative id from the database
-  lab.test( 'DELETE negative ID role', function( done ) {
+  // Test scenario to delete a specific role from the database
+  lab.test( 'DELETE specific role - zero ID role', function( done ) {
 
-    var options = {
+    let options = {
       method: 'DELETE',
-      url: baseRoute + '/-1'
+      url: baseRoute + '/0',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to delete a specific role from the database
+  lab.test( 'DELETE specific role - negative ID user', function( done ) {
+
+    let options = {
+      method: 'DELETE',
+      url: baseRoute + '/-1',
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );

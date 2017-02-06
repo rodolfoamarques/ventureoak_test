@@ -14,7 +14,8 @@ const baseRoute = '/users';
 
 lab.experiment( 'Users Endpoint', function() {
 
-  var way_over_highest_user_id;
+  var auth_tokens = {};
+
   var sample_user = {
     email: 'sample@mail.com',
     password: 'password',
@@ -22,6 +23,7 @@ lab.experiment( 'Users Endpoint', function() {
     full_name: 'Sample User',
     role_id: 3
   };
+
   var updated_user = {
     email: 'updated_sample@mail.com',
     password: 'other_password',
@@ -34,10 +36,66 @@ lab.experiment( 'Users Endpoint', function() {
   // Run before the first test
   lab.before( done => {
 
-    db.User.count()
-    .then( reply => {
-      way_over_highest_user_id = reply*999+9999;
-      done();
+    let login_info = {
+      super_admin: {
+        email: 'demo1@mail.com',
+        password: 'password'
+      },
+      admin: {
+        email: 'demo2@mail.com',
+        password: 'password'
+      },
+      user: {
+        email: 'demo3@mail.com',
+        password: 'password'
+      }
+    };
+
+    let options = {
+      method: 'POST',
+      url: '/authentication/login'
+    };
+
+    // perform login with super_admin user to get authorization token
+    options.payload = login_info.super_admin;
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      auth_tokens.super_admin = result.token;
+    });
+
+    // perform login with admin user to get authorization token
+    options.payload = login_info.admin;
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      auth_tokens.admin = result.token;
+    });
+
+    // perform login with user user to get authorization token
+    options.payload = login_info.user;
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 200 ("Ok")
+      code.expect( response.statusCode ).to.be.equal( 200 );
+
+      auth_tokens.user = result.token;
+
+      // done() callback is required to end the test.
+      server.stop( done );
     });
 
   });
@@ -56,16 +114,94 @@ lab.experiment( 'Users Endpoint', function() {
 
 
   // Test scenario to get all users in the database
-  lab.test( 'GET all users', function( done ) {
+  lab.test( 'GET all users - no authorization header', function( done ) {
 
-    var options = {
+    let options = {
       method: 'GET',
       url: baseRoute
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get all users in the database
+  lab.test( 'GET all users - invalid authorization token', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute,
+      headers: {
+        authorization: 'this_is_an_invalid_token'
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get all users in the database
+  lab.test( 'GET all users - unauthorized user', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute,
+      headers: {
+        authorization: auth_tokens.super_admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get all users in the database
+  lab.test( 'GET all users - authorized user', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 200 ("Ok")
       code.expect( response.statusCode ).to.be.equal( 200 );
@@ -76,11 +212,11 @@ lab.experiment( 'Users Endpoint', function() {
         // Expect result length to be equal to the database reply length
         code.expect( result.length ).to.be.equal( users.length );
 
-        for( var i=0; i<result.length; i++ ) {
-          var user = users[i].toJSON();
-          var res = result[i].toJSON();
+        for( let i=0; i<result.length; i++ ) {
+          let user = users[i].toJSON();
+          let res = result[i].toJSON();
 
-          // Expect each user in result to be equal to each user in the database reply
+          // Expect each user in result to be equal to each user in the database
           code.expect( res ).to.be.equal( user );
         }
 
@@ -98,27 +234,24 @@ lab.experiment( 'Users Endpoint', function() {
     // create a test user
     db.User.create( sample_user )
     .then( created_user => {
-      created_user = created_user.toJSON();
-      delete created_user.password;
-      delete created_user.created_at;
-      delete created_user.updated_at;
-      delete created_user.deleted_at;
 
-      var options = {
+      let options = {
         method: 'GET',
-        url: baseRoute + '/' + created_user.id
+        url: baseRoute + '/' + created_user.id,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result.toJSON();
+        let result = response.result.toJSON();
 
         // Expect http response status code to be 200 ("Ok")
         code.expect( response.statusCode ).to.be.equal( 200 );
 
         db.User.scope([ 'withRole' ]).findById( result.id )
         .then( user => {
-
           // Expect result to be equal to database reply
           code.expect( result ).to.be.equal( user.toJSON() );
 
@@ -134,17 +267,20 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to get an user that does not exist in the database
-  lab.test( 'GET non-existing user', function( done ) {
+  // Test scenario to get a specific user from the database
+  lab.test( 'GET specific user - non-existing user', function( done ) {
 
-    var options = {
+    let options = {
       method: 'GET',
-      url: baseRoute + '/' + way_over_highest_user_id
+      url: baseRoute + '/124124124124124124',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 404 ("Not Found")
       code.expect( response.statusCode ).to.be.equal( 404 );
@@ -157,17 +293,46 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to get an entry with a negative id from the database
-  lab.test( 'GET negative ID user', function( done ) {
+  // Test scenario to get a specific user from the database
+  lab.test( 'GET specific user - zero ID user', function( done ) {
 
-    var options = {
+    let options = {
       method: 'GET',
-      url: baseRoute + '/-1'
+      url: baseRoute + '/0',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to get a specific user from the database
+  lab.test( 'GET specific user - negative ID user', function( done ) {
+
+    let options = {
+      method: 'GET',
+      url: baseRoute + '/-1',
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -181,9 +346,9 @@ lab.experiment( 'Users Endpoint', function() {
 
 
   // Test scenario to create a new user in the database
-  lab.test( 'POST new user', function( done ) {
+  lab.test( 'POST new user - no authorization header', function( done ) {
 
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
       payload: sample_user
@@ -191,7 +356,88 @@ lab.experiment( 'Users Endpoint', function() {
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid authorization token', function( done ) {
+
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_user,
+      headers: {
+        authorization: 'this_is_an_invalid_token'
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - unauthorized user', function( done ) {
+
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.super_admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 401 ("Unauthorized")
+      code.expect( response.statusCode ).to.be.equal( 401 );
+      code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - authorized user', function( done ) {
+
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
       delete result.created_at;
       delete result.updated_at;
       delete result.deleted_at;
@@ -216,19 +462,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'POST new user with forbidden keys - part 1 (forbidden: id)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - forbidden key (id)', function( done ) {
 
     sample_user.id = 10;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -243,19 +492,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'POST new user with forbidden keys - part 2 (forbidden: enabled)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - forbidden key (enabled)', function( done ) {
 
     sample_user.enabled = false;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -270,19 +522,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'POST new user with forbidden keys - part 3 (forbidden: last_login_at)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - forbidden key (last_login_at)', function( done ) {
 
     sample_user.last_login_at = moment();
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -297,19 +552,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'POST new user with forbidden keys - part 2 (forbidden: created_at)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - forbidden key (created_at)', function( done ) {
 
     sample_user.created_at = moment();
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -324,19 +582,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'POST new user with forbidden keys - part 3 (forbidden: updated_at)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - forbidden key (updated_at)', function( done ) {
 
     sample_user.updated_at = moment();
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -351,19 +612,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'POST new user with forbidden keys - part 4 (forbidden: deleted_at)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - forbidden key (deleted_at)', function( done ) {
 
     sample_user.deleted_at = moment();
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -378,19 +642,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with inexistent keys in the model
-  lab.test( 'POST new user with extra information (extra: non_existing_key)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - extra key (non_existing_key)', function( done ) {
 
     sample_user.non_existing_key = 'dummy value';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -405,19 +672,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with required parameters missing
-  lab.test( 'POST new user with missing data - part 1 (email missing)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - missing key (email)', function( done ) {
 
     delete sample_user.email;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -432,19 +702,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with required parameters missing
-  lab.test( 'POST new user with missing data - part 2 (role_id missing)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - missing key (role_id)', function( done ) {
 
     delete sample_user.role_id;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -459,19 +732,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with required parameters missing
-  lab.test( 'POST new user with missing data - part 3 (password missing)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - missing key (password_confirmation)', function( done ) {
 
     delete sample_user.password_confirmation;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -486,19 +762,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with required parameters missing
-  lab.test( 'POST new user with missing data - part 4 (password_confirmation missing)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - missing key (password)', function( done ) {
 
     delete sample_user.password;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -513,19 +792,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 1.0 (email must be a valid email address)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (email must be a string)', function( done ) {
 
     sample_user.email = 10;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -540,19 +822,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 1.1 (email must be a valid email address)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (email must be a valid email address) v1', function( done ) {
 
     sample_user.email = 'invalid_email';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -567,19 +852,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 1.2 (email must be a valid email address)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (email must be a valid email address) v2', function( done ) {
 
     sample_user.email = 'invalid@email';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -594,19 +882,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 1.3 (email must be a valid email address)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (email must be a valid email address) v3', function( done ) {
 
     sample_user.email = 'invalid@.com';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -621,19 +912,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 1.4 (email must be a valid email address)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (email must be a valid email address) v4', function( done ) {
 
     sample_user.email = '@mail.com';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -648,8 +942,8 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 1.5 (email must be unique)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (email must be unique)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
@@ -657,15 +951,18 @@ lab.experiment( 'Users Endpoint', function() {
 
       // attempt to POST a new user with the same email as the test user
       updated_user.email = sample_user.email;
-      var options = {
+      let options = {
         method: 'POST',
         url: baseRoute,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -684,19 +981,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 2.0 (role_id must be an integer larger than or equal to 1)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (role_id must be a number)', function( done ) {
 
     sample_user.role_id = 'not a number';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -711,73 +1011,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 2.1 (role_id must be an integer larger than or equal to 1)', function( done ) {
-
-    sample_user.role_id = 0;
-    var options = {
-      method: 'POST',
-      url: baseRoute,
-      payload: sample_user
-    }
-
-    // server.inject allows a simulation of an http request
-    server.inject( options, function( response ) {
-      var result = response.result;
-
-      // Expect http response status code to be 400 ("Bad Request")
-      code.expect( response.statusCode ).to.be.equal( 400 );
-      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
-
-      sample_user.role_id = 3;
-
-      // done() callback is required to end the test.
-      server.stop( done );
-    });
-
-  });
-
-
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 2.2 (role_id must be an integer larger than or equal to 1)', function( done ) {
-
-    sample_user.role_id = -123;
-    var options = {
-      method: 'POST',
-      url: baseRoute,
-      payload: sample_user
-    }
-
-    // server.inject allows a simulation of an http request
-    server.inject( options, function( response ) {
-      var result = response.result;
-
-      // Expect http response status code to be 400 ("Bad Request")
-      code.expect( response.statusCode ).to.be.equal( 400 );
-      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
-
-      sample_user.role_id = 3;
-
-      // done() callback is required to end the test.
-      server.stop( done );
-    });
-
-  });
-
-
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 2.3 (role_id must be an integer larger than or equal to 1)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (role_id must be an integer)', function( done ) {
 
     sample_user.role_id = 1.1241;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -792,19 +1041,112 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 3 (full_name must be a string)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (role_id must be an integer larger than or equal to 1) v1', function( done ) {
 
-    sample_user.full_name = true;
-    var options = {
+    sample_user.role_id = 0;
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      sample_user.role_id = 3;
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (role_id must be an integer larger than or equal to 1) v2', function( done ) {
+
+    sample_user.role_id = -123;
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      sample_user.role_id = 3;
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (role_id must be a valid reference)', function( done ) {
+
+    sample_user.role_id = 1512512125;
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
+
+      // Expect http response status code to be 404 ("Not Found")
+      code.expect( response.statusCode ).to.be.equal( 404 );
+      code.expect( response.statusMessage ).to.be.equal( 'Not Found' );
+
+      sample_user.role_id = 3;
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (full_name must be a string)', function( done ) {
+
+    sample_user.full_name = true;
+    let options = {
+      method: 'POST',
+      url: baseRoute,
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -819,19 +1161,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 4.0 (password_confirmation must be a string)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (password_confirmation must be a string)', function( done ) {
 
     sample_user.password_confirmation = 1234;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -846,19 +1191,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 4.1 (password must be a string)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (password must be a string)', function( done ) {
 
     sample_user.password = 1234;
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -873,19 +1221,22 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'POST new user with invalid data - part 4.2 (password must be equal to password_confirmation)', function( done ) {
+  // Test scenario to create a new user in the database
+  lab.test( 'POST new user - invalid data (password must be equal to password_confirmation)', function( done ) {
 
     sample_user.password = 'not_password';
-    var options = {
+    let options = {
       method: 'POST',
       url: baseRoute,
-      payload: sample_user
+      payload: sample_user,
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );
@@ -901,13 +1252,13 @@ lab.experiment( 'Users Endpoint', function() {
 
 
   // Test scenario to update an existing user in the database
-  lab.test( 'PUT to existing user', function( done ) {
+  lab.test( 'PUT to existing user - no authorization header', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
         payload: updated_user
@@ -915,7 +1266,112 @@ lab.experiment( 'Users Endpoint', function() {
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result.toJSON();
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the user created with POST
+        user.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid authorization token', function( done ) {
+
+    // create a test user
+    db.User.create( sample_user )
+    .then( user => {
+
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + user.id,
+        payload: updated_user,
+        headers: {
+          authorization: 'this_is_an_invalid_token'
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the user created with POST
+        user.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - unauthorized user', function( done ) {
+
+    // create a test user
+    db.User.create( sample_user )
+    .then( user => {
+
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + user.id,
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.super_admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the user created with POST
+        user.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - authorized user', function( done ) {
+
+    // create a test user
+    db.User.create( sample_user )
+    .then( user => {
+
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + user.id,
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result.toJSON();
         delete result.password;
         delete result.created_at;
         delete result.updated_at;
@@ -942,23 +1398,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'PUT to existing user with forbidden keys - part 1 (forbidden: id)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - forbidden key (id)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.id = 10;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -977,23 +1436,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'PUT to existing user with forbidden keys - part 2 (forbidden: created_at)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - forbidden key (created_at)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.created_at = moment();
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1012,23 +1474,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'PUT to existing user with forbidden keys - part 3 (forbidden: updated_at)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - forbidden key (updated_at)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
-      updated_user.updated_at = moment();
 
-      var options = {
+      updated_user.updated_at = moment();
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1047,23 +1512,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with forbidden keys
-  lab.test( 'PUT to existing user with forbidden keys - part 3 (forbidden: updated_at)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - forbidden key (deleted_at)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
-      updated_user.deleted_at = moment();
 
-      var options = {
+      updated_user.deleted_at = moment();
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1082,23 +1550,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with inexistent keys in the model
-  lab.test( 'PUT to existing user with extra information (extra: non_existing_key)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - extra key (non_existing_key)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.non_existing_key = 'dummy value';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1117,23 +1588,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.0 (email must be a valid email address)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be a string)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.email = 10;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1152,23 +1626,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.1 (email must be a valid email address)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be a valid email address) v1', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.email = 'invalid_email';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1187,23 +1664,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.2 (email must be a valid email address)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be a valid email address) v2', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.email = 'invalid@email';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1222,23 +1702,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.2 (email must be a valid email address)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be a valid email address) v3', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.email = 'invalid@email';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1257,23 +1740,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.3 (email must be a valid email address)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be a valid email address) v4', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.email = 'invalid@.com';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1292,23 +1778,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.4 (email must be a valid email address)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be a valid email address) v5', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.email = '@mail.com';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1327,8 +1816,8 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 1.5 (email must be unique)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (email must be unique)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
@@ -1338,16 +1827,19 @@ lab.experiment( 'Users Endpoint', function() {
 
       // change the email of the second test user to match the first
       updated_user.email = sample_user.email;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // try to PUT the information
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1369,23 +1861,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 2.0 (role_id must be an integer larger than or equal to 1)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (role_id must be a number)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.role_id = 'not a number';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1404,93 +1899,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 2.1 (role_id must be an integer larger than or equal to 1)', function( done ) {
-
-    // create a test user
-    db.User.create( sample_user )
-    .then( user => {
-
-      updated_user.role_id = 0;
-      var options = {
-        method: 'PUT',
-        url: baseRoute + '/' + user.id,
-        payload: updated_user
-      }
-
-      // server.inject allows a simulation of an http request
-      server.inject( options, function( response ) {
-        var result = response.result;
-
-        // Expect http response status code to be 400 ("Bad Request")
-        code.expect( response.statusCode ).to.be.equal( 400 );
-        code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
-
-        // destroy the test user
-        user.destroy();
-
-        updated_user.role_id = 3;
-
-        // done() callback is required to end the test.
-        server.stop( done );
-      });
-    });
-
-  });
-
-
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 2.2 (role_id must be an integer larger than or equal to 1)', function( done ) {
-
-    // create a test user
-    db.User.create( sample_user )
-    .then( user => {
-
-      updated_user.role_id = -123;
-      var options = {
-        method: 'PUT',
-        url: baseRoute + '/' + user.id,
-        payload: updated_user
-      }
-
-      // server.inject allows a simulation of an http request
-      server.inject( options, function( response ) {
-        var result = response.result;
-
-        // Expect http response status code to be 400 ("Bad Request")
-        code.expect( response.statusCode ).to.be.equal( 400 );
-        code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
-
-        // destroy the test user
-        user.destroy();
-
-        updated_user.role_id = 3;
-
-        // done() callback is required to end the test.
-        server.stop( done );
-      });
-    });
-
-  });
-
-
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 2.3 (role_id must be an integer larger than or equal to 1)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (role_id must be an integer)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.role_id = 1.1241;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1509,23 +1937,140 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 3 (full_name must be a string)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (role_id must be an integer larger than or equal to 1) v1', function( done ) {
+
+    // create a test user
+    db.User.create( sample_user )
+    .then( user => {
+
+      updated_user.role_id = 0;
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + user.id,
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 400 ("Bad Request")
+        code.expect( response.statusCode ).to.be.equal( 400 );
+        code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+        // destroy the test user
+        user.destroy();
+
+        updated_user.role_id = 3;
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (role_id must be an integer larger than or equal to 1) v2', function( done ) {
+
+    // create a test user
+    db.User.create( sample_user )
+    .then( user => {
+
+      updated_user.role_id = -123;
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + user.id,
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 400 ("Bad Request")
+        code.expect( response.statusCode ).to.be.equal( 400 );
+        code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+        // destroy the test user
+        user.destroy();
+
+        updated_user.role_id = 3;
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (role_id must be a valid reference)', function( done ) {
+
+    // create a test user
+    db.User.create( sample_user )
+    .then( user => {
+
+      updated_user.role_id = 1214251265;
+      let options = {
+        method: 'PUT',
+        url: baseRoute + '/' + user.id,
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 404 ("Not Found")
+        code.expect( response.statusCode ).to.be.equal( 404 );
+        code.expect( response.statusMessage ).to.be.equal( 'Not Found' );
+
+        // destroy the test user
+        user.destroy();
+
+        updated_user.role_id = 3;
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (full_name must be a string)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.full_name = true;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1544,23 +2089,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 4.0 (password_confirmation must be a string)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (password_confirmation must be a string)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.password_confirmation = 1234;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1579,23 +2127,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 4.1 (password must be a string)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (password must be a string)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.password = 1234;
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1614,23 +2165,26 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to create a new user in the database with invalid values
-  lab.test( 'PUT to existing user with invalid data - part 4.2 (password must be equal to password_confirmation)', function( done ) {
+  // Test scenario to update an existing user in the database
+  lab.test( 'PUT to existing user - invalid data (password must be equal to password_confirmation)', function( done ) {
 
     // create a test user
     db.User.create( sample_user )
     .then( user => {
 
       updated_user.password = 'not_password';
-      var options = {
+      let options = {
         method: 'PUT',
         url: baseRoute + '/' + user.id,
-        payload: updated_user
+        payload: updated_user,
+        headers: {
+          authorization: auth_tokens.admin
+        }
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
 
         // Expect http response status code to be 400 ("Bad Request")
         code.expect( response.statusCode ).to.be.equal( 400 );
@@ -1650,18 +2204,114 @@ lab.experiment( 'Users Endpoint', function() {
 
 
   // Test scenario to delete a specific user from the database
-  lab.test( 'DELETE specific user', function( done ) {
+  lab.test( 'DELETE specific user - no authorization header', function( done ) {
 
     db.User.create( sample_user )
     .then( user => {
-      var options = {
+      let options = {
         method: 'DELETE',
         url: baseRoute + '/' + user.id
       }
 
       // server.inject allows a simulation of an http request
       server.inject( options, function( response ) {
-        var result = response.result;
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the test user
+        user.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to delete a specific user from the database
+  lab.test( 'DELETE specific user - invalid authorization token', function( done ) {
+
+    db.User.create( sample_user )
+    .then( user => {
+      let options = {
+        method: 'DELETE',
+        url: baseRoute + '/' + user.id,
+        headers: {
+          authorization: 'this_is_an_invalid_token'
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the test user
+        user.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to delete a specific user from the database
+  lab.test( 'DELETE specific user - unauthorized user', function( done ) {
+
+    db.User.create( sample_user )
+    .then( user => {
+      let options = {
+        method: 'DELETE',
+        url: baseRoute + '/' + user.id,
+        headers: {
+          authorization: auth_tokens.super_admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
+
+        // Expect http response status code to be 401 ("Unauthorized")
+        code.expect( response.statusCode ).to.be.equal( 401 );
+        code.expect( response.statusMessage ).to.be.equal( 'Unauthorized' );
+
+        // destroy the test user
+        user.destroy();
+
+        // done() callback is required to end the test.
+        server.stop( done );
+      });
+    });
+
+  });
+
+
+  // Test scenario to delete a specific user from the database
+  lab.test( 'DELETE specific user - authorized user', function( done ) {
+
+    db.User.create( sample_user )
+    .then( user => {
+      let options = {
+        method: 'DELETE',
+        url: baseRoute + '/' + user.id,
+        headers: {
+          authorization: auth_tokens.admin
+        }
+      }
+
+      // server.inject allows a simulation of an http request
+      server.inject( options, function( response ) {
+        let result = response.result;
 
         // Expect http response status code to be 200 ("Ok")
         code.expect( response.statusCode ).to.be.equal( 200 );
@@ -1681,17 +2331,20 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to delete an user that does not exist in the database
-  lab.test( 'DELETE non-existing user', function( done ) {
+  // Test scenario to delete a specific user from the database
+  lab.test( 'DELETE specific user - non-existing user', function( done ) {
 
-    var options = {
+    let options = {
       method: 'DELETE',
-      url: baseRoute + '/' + way_over_highest_user_id
+      url: baseRoute + '/124124124124124124',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
 
       // Expect http response status code to be 404 ("Not Found")
       code.expect( response.statusCode ).to.be.equal( 404 );
@@ -1704,17 +2357,46 @@ lab.experiment( 'Users Endpoint', function() {
   });
 
 
-  // Test scenario to delete an entry with a negative id from the database
-  lab.test( 'DELETE negative ID user', function( done ) {
+  // Test scenario to delete a specific user from the database
+  lab.test( 'DELETE specific user - zero ID user', function( done ) {
 
-    var options = {
+    let options = {
       method: 'DELETE',
-      url: baseRoute + '/-1'
+      url: baseRoute + '/0',
+      headers: {
+        authorization: auth_tokens.admin
+      }
     }
 
     // server.inject allows a simulation of an http request
     server.inject( options, function( response ) {
-      var result = response.result;
+      let result = response.result;
+
+      // Expect http response status code to be 400 ("Bad Request")
+      code.expect( response.statusCode ).to.be.equal( 400 );
+      code.expect( response.statusMessage ).to.be.equal( 'Bad Request' );
+
+      // done() callback is required to end the test.
+      server.stop( done );
+    });
+
+  });
+
+
+  // Test scenario to delete a specific user from the database
+  lab.test( 'DELETE specific user - negative ID user', function( done ) {
+
+    let options = {
+      method: 'DELETE',
+      url: baseRoute + '/-1',
+      headers: {
+        authorization: auth_tokens.admin
+      }
+    }
+
+    // server.inject allows a simulation of an http request
+    server.inject( options, function( response ) {
+      let result = response.result;
 
       // Expect http response status code to be 400 ("Bad Request")
       code.expect( response.statusCode ).to.be.equal( 400 );

@@ -14,7 +14,11 @@ module.exports = [
     description: 'Create new role',
     notes: 'Create new role',
     tags: ['api', 'system_roles'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['system_roles:create']
+      }
+    },
     validate: {
       payload:
         joi.object({
@@ -35,7 +39,11 @@ module.exports = [
     description: 'List of all system roles',
     notes: 'List of all system roles',
     tags: ['api', 'system_roles'],
-    auth: false
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['system_roles:readAll']
+      }
+    }
   }
 }, {
   method: 'GET',
@@ -45,7 +53,11 @@ module.exports = [
     description: 'Show specific system role',
     notes: 'Show specific system role',
     tags: ['api', 'system_roles'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['system_roles:readOne']
+      }
+    },
     validate: {
       params: {
         id: joi.number().integer().min(1).required().description('Role\'s reference id')
@@ -60,7 +72,11 @@ module.exports = [
     description: 'Update specific system role',
     notes: 'Update specific system role',
     tags: ['api', 'system_roles'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['system_roles:update']
+      }
+    },
     validate: {
       params: {
         id: joi.number().integer().min(1).required().description('Role\'s reference id')
@@ -84,7 +100,11 @@ module.exports = [
     description: 'Delete specific system role',
     notes: 'Delete specific system role',
     tags: ['api', 'system_roles'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['system_roles:destroy']
+      }
+    },
     validate: {
       params: {
         id: joi.number().integer().min(1).required().description('Role\'s reference id')

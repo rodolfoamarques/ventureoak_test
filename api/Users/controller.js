@@ -2,7 +2,8 @@
 
 var Boom = require( 'boom' );
 var Bcrypt = require( 'bcrypt' );
-var Promise = require("bluebird");
+var Promise = require( 'bluebird' );
+
 var db = require( '../../database/models' );
 
 

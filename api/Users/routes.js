@@ -15,7 +15,11 @@ module.exports = [
     description: 'Create user',
     notes: 'Create user',
     tags: ['api', 'users'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['users:create']
+      }
+    },
     validate: {
       payload:
         joi.object({
@@ -41,7 +45,11 @@ module.exports = [
     description: 'List of all users',
     notes: 'List of all users',
     tags: ['api', 'users'],
-    auth: false
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['users:readAll']
+      }
+    }
   }
 }, {
   method: 'GET',
@@ -51,7 +59,11 @@ module.exports = [
     description: 'Show specific user',
     notes: 'Show specific user',
     tags: ['api', 'users'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['users:readOne']
+      }
+    },
     validate: {
       params: {
         id: joi.number().integer().min(1).required().description('User\'s reference id')
@@ -66,7 +78,11 @@ module.exports = [
     description: 'Update specific user',
     notes: 'Update specific user',
     tags: ['api', 'users'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['users:update']
+      }
+    },
     validate: {
       params: {
         id: joi.number().integer().min(1).required().description('User\'s reference id')
@@ -95,7 +111,11 @@ module.exports = [
     description: 'Delete specific user',
     notes: 'Delete specific user',
     tags: ['api', 'users'],
-    auth: false,
+    plugins: {
+      hapiRouteAcl: {
+        permissions: ['users:destroy']
+      }
+    },
     validate: {
       params: {
         id: joi.number().integer().min(1).required().description('User\'s reference id')
