@@ -2,7 +2,7 @@
 
 var Boom = require( 'boom' );
 var Promise = require("bluebird");
-var db = require( '../../database/models' );
+var db = require( '../../../database/models' );
 
 
 // This function will create a new system role and return its details.
