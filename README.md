@@ -83,7 +83,7 @@ Developed on Windows OS
     > with the password: root_pass
     > grant access to database "ventureoak_dev" to user "root"
     >
-    > If you already have your environment setup and want another username/password, simply update the file "config/config.json".
+    > If you already have your environment setup and want another username/password, simply update the file "config/database.json".
 
 #### Getting started
 
@@ -112,7 +112,34 @@ Developed on Windows OS
 
 
 
+## Latest test results
+
+```
+$ npm test
+
+166 tests complete
+Test duration: 2930 ms
+No global variable leaks detected
+Coverage: 94.54% (68/1245)
+```
+
+
+
+
 ## Assumptions
 
 * FrontEnd
   > Since I use swagger for documentation and manual testing of each API route, I saved some effort and did not develop any kind of FrontEnd interface. Swagger usually provides a simple yet good enough interface to interact with the API routes, but if FontEnd is also a requirement, please do give a description of what be acceptable and allow me a couple more days to complete it.
+
+* Translation requirement: "Correct upper case and lower case formatting"
+  > This is ensured by never modifying the original world, besides adding the suffix or moving the first consonants to the end and then adding the suffix. The suffix is always lowercase. This means that any capitalized letter stays capitalized and any lowercase letter stays lowercase (eg. 'house' is translated to 'ousehay', 'hoUSe' is translated to 'oUSehay'). The only exception to this is when the word has the first letter capitalized, which transforms the letter to lowercase and capitalizes the first letter of the translated word (eg. 'House' is translated to 'Ousehay')
+
+* Compound words and Hyphenated words
+  > Hyphenated word handling is required by the exercise. The approach taken was to utilize a dictionary created through [Wikipedia's List of contractions](https://en.wikipedia.org/wiki/Wikipedia:List_of_English_contractions). For ambiguous contractions like "he's" (which could mean for example "he is" or "he was" or "he has"), a default translation was selected at random. A more robust algorithm could interpret the text and select the appropriate expansion.
+
+  > Compound word handling is not required by the exercise, but most Pig Latin resources mention they should be handled to increase complexity. This functionality was added to the translate_text() function with the same dictionary approach, based on [Many Thing's Compound Word List](http://www.manythings.org/vocabulary/lists/a/words.php?f=compound_words).
+
+  > It is worth to note that I do not consider these dictionaries to be exhaustive or completely reliable/accurate. Many of the represented contractions or compound words are or may be in linguistic grey areas filled with controversy and debate. They serve the purpose of demonstration and would require an in-depth study of the English language to be fit for a production application.
+
+* Authentication / Authorization system
+  > The implemented authentication/authorization system is based on JWT. When a registered user logs in with valid credentials, an encrypted token is issued, based on the id of the user and the expiration date (12h after the login request). It is assumed that the FrontEnd will ensure the storage of this token and use it in each request to the API. This approach assumes that it is the responsibility of the FrontEnd to destroy/clean the storage to invalidate the token and thus no logout route is implemented in the API.
