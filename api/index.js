@@ -4,11 +4,9 @@ let api;
 
 var fs = require( 'fs' );
 var path = require( 'path' );
-var basename = path.basename( module.filename );
-
-var dir = require( 'node-dir' );
-
 var Promise = require( 'bluebird' );
+
+var basename = path.basename( module.filename );
 
 var db = require( '../database/models' );
 const configs = require( '../config/configs' );
@@ -36,7 +34,6 @@ exports.init = ( server ) => {
         register: require( 'hapi-swaggered' ),
         options: {
           schemes: ['http'],
-          stripPrefix: '/api',
           auth: false
         }
       },
@@ -110,31 +107,12 @@ exports.init = ( server ) => {
 
   // Look through the routes in all the subdirectories
   // of the API and create a new route for each one
-  /**/
   fs.readdirSync( __dirname )
   .filter( file => file !== basename )
   .forEach( file => {
     let routes = require( path.join(__dirname, file, 'routes.js') );
     api.route( routes );
   });
-  /**/
-  dir.files( __dirname, function( err, files ) {
-      if( err ) throw err;
-
-      files.forEach( function( file ) {
-        if( file.endsWith('routes.js') ) {
-          let routes = require( file );
-
-          routes = routes.map( route => {
-            route.path = '/api' + route.path;
-            return route;
-          });
-          api.route( routes );
-        }
-      });
-    }
-  );
-  /**/
 
   return api;
 };
