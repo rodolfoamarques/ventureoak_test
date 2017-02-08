@@ -2,11 +2,8 @@
 
 let api;
 
-var fs = require( 'fs' );
-var path = require( 'path' );
+var ffs = require( 'final-fs' );
 var Promise = require( 'bluebird' );
-
-var basename = path.basename( module.filename );
 
 var db = require( '../database/models' );
 const configs = require( '../config/configs' );
@@ -107,11 +104,13 @@ exports.init = ( server ) => {
 
   // Look through the routes in all the subdirectories
   // of the API and create a new route for each one
-  fs.readdirSync( __dirname )
-  .filter( file => file !== basename )
+  ffs.readdirRecursiveSync( __dirname, true )
   .forEach( file => {
-    let routes = require( path.join(__dirname, file, 'routes.js') );
-    api.route( routes );
+
+    if( file.endsWith('routes.js') ) {
+      let routes = require( './' + file );
+      api.route( routes );
+    }
   });
 
   return api;
