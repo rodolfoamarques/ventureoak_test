@@ -47,6 +47,7 @@ exports.readAll = ( request, reply ) =>
   db.Translation.findAll()
   // reply with the information
   .then( reply )
+  .then( translations => reply.bissle({ translations }, { key: "translations"}) )
   // catch any error that may have been thrown
   .catch( err =>
     err.isBoom ?

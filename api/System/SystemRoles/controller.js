@@ -36,6 +36,7 @@ exports.readAll = ( request, reply ) =>
   db.SystemRole.scope([ 'withPermissions' ]).findAll()
   // reply with the information
   .then( reply )
+  .then( roles => reply.bissle({ roles }, { key: "roles"}) )
   // catch any error that may have been thrown
   .catch( err =>
     err.isBoom ?

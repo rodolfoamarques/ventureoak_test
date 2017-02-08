@@ -18,7 +18,9 @@
     "start": "node ."
   },
   "dependencies": {
+    "akaya": "^1.0.1",
     "bcrypt": "^1.0.2",
+    "bissle": "^0.7.0",
     "bluebird": "^3.4.7",
     "boom": "^4.2.0",
     "final-fs": "^1.6.1",

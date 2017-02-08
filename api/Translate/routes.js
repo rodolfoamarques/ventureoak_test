@@ -37,12 +37,19 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
+    id: 'paginated_translations',
     description: 'List of all translations',
     notes: 'List of all translations',
     tags: ['api', 'translations'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['translations:readAll']
+      }
+    },
+    validate: {
+      query: {
+        per_page: joi.number().integer().min(1).description('Amount of elements per page'),
+        page: joi.number().integer().min(1).description('Page identifier')
       }
     }
   }

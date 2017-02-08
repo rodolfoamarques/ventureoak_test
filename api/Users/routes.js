@@ -42,12 +42,19 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
+    id: 'paginated_users',
     description: 'List of all users',
     notes: 'List of all users',
     tags: ['api', 'users'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['users:readAll']
+      }
+    },
+    validate: {
+      query: {
+        per_page: joi.number().integer().min(1).description('Amount of elements per page'),
+        page: joi.number().integer().min(1).description('Page identifier')
       }
     }
   }

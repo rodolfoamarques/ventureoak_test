@@ -36,12 +36,19 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
+    id: 'paginated_system_roles'
     description: 'List of all system roles',
     notes: 'List of all system roles',
     tags: ['api', 'system_roles'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['system_roles:readAll']
+      }
+    },
+    validate: {
+      query: {
+        per_page: joi.number().integer().min(1).description('Amount of elements per page'),
+        page: joi.number().integer().min(1).description('Page identifier')
       }
     }
   }

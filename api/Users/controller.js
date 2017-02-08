@@ -63,7 +63,7 @@ exports.readAll = ( request, reply ) =>
   // retrieve all users from database
   db.User.scope([ 'defaultScope', 'withRole' ]).findAll()
   // reply with the information
-  .then( reply )
+  .then( users => reply.bissle({ users }, { key: "users"}) )
   // catch any error that may have been thrown
   .catch( err =>
     err.isBoom ?
