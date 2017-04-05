@@ -36,7 +36,7 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
-    id: 'paginated_system_roles'
+    id: 'paginated_system_roles',
     description: 'List of all system roles',
     notes: 'List of all system roles',
     tags: ['api', 'system_roles'],

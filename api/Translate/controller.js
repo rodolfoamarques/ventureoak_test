@@ -1,4 +1,3 @@
-'use strict'; /* jshint ignore:line */
 
 var boom = require( 'boom' );
 var Promise = require( 'bluebird' );
@@ -46,7 +45,6 @@ exports.readAll = ( request, reply ) =>
   // retrieve all translations from database
   db.Translation.findAll()
   // reply with the information
-  .then( reply )
   .then( translations => reply.bissle({ translations }, { key: "translations"}) )
   // catch any error that may have been thrown
   .catch( err =>

@@ -16,9 +16,36 @@ exports.create = ( request, reply ) =>
         Promise.reject( Boom.badRequest('name_already_exists') ) :
         null
     )
+    .then( () => {
+      let new_role = {
+        name: request.payload.name,
+        permissions: JSON.parse( request.payload.permissions )
+      };
 
+      for( var route in new_role.permissions ) {
+        if( new_role.permissions.hasOwnProperty(route) ) {
+
+          // TODO: check if 'route' is a valid route
+
+          for( var permission in new_role.permissions[route] ) {
+            if( new_role.permissions[route].hasOwnProperty(permission) ) {
+
+              // TODO: check if 'permission' is a valid permission for the current route
+
+              if( typeof(new_role.permissions[route][permission]) !== 'boolean' ) {
+                return Promise.reject( Boom.badRequest('permissions_must_be_boolean_values') );
+              }
+
+            }
+          }
+
+        }
+      }
+
+      return new_role;
+    })
     // create the system role
-    .then( () => db.SystemRole.create(request.payload, { transaction: t }) )
+    .then( new_role => db.SystemRole.create(new_role, { transaction: t }) )
   )
   // reply with the information
   .then( reply )
@@ -35,7 +62,6 @@ exports.readAll = ( request, reply ) =>
   // retrieve all system roles from database
   db.SystemRole.scope([ 'withPermissions' ]).findAll()
   // reply with the information
-  .then( reply )
   .then( roles => reply.bissle({ roles }, { key: "roles"}) )
   // catch any error that may have been thrown
   .catch( err =>
