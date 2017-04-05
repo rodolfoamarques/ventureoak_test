@@ -210,15 +210,13 @@ lab.experiment( 'Users Endpoint', function() {
       db.User.scope(['withRole']).findAll()
       .then( users => {
         // Expect result length to be equal to the database reply length
-        code.expect( result.length ).to.be.equal( users.length );
+        code.expect( result.users.length ).to.be.equal( users.length );
 
-        for( let i=0; i<result.length; i++ ) {
-          let user = users[i].toJSON();
-          let res = result[i].toJSON();
-
+        result.users.map( (element, index) => {
+          let user = users[index].toJSON();
           // Expect each user in result to be equal to each user in the database
-          code.expect( res ).to.be.equal( user );
-        }
+          code.expect( element.toJSON() ).to.be.equal( user );
+        });
 
         // done() callback is required to end the test.
         server.stop( done );
@@ -272,7 +270,7 @@ lab.experiment( 'Users Endpoint', function() {
 
     let options = {
       method: 'GET',
-      url: baseRoute + '/124124124124124124',
+      url: baseRoute + '/124124124124124',
       headers: {
         authorization: auth_tokens.admin
       }
@@ -2336,7 +2334,7 @@ lab.experiment( 'Users Endpoint', function() {
 
     let options = {
       method: 'DELETE',
-      url: baseRoute + '/124124124124124124',
+      url: baseRoute + '/124124124124124',
       headers: {
         authorization: auth_tokens.admin
       }

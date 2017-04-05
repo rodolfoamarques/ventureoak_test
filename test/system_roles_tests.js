@@ -203,15 +203,13 @@ lab.experiment( 'Roles Endpoint', function() {
       db.SystemRole.scope([ 'withPermissions' ]).findAll()
       .then( roles => {
         // Expect result length to be equal to the database reply length
-        code.expect( result.length ).to.be.equal( roles.length );
+        code.expect( result.roles.length ).to.be.equal( roles.length );
 
-        for( let i=0; i<result.length; i++ ) {
-          let role = roles[i].toJSON();
-          let res = result[i].toJSON();
-
+        result.roles.map( (element, index) => {
+          let role = roles[index].toJSON();
           // Expect each role in result to be equal to each role in the database reply
-          code.expect( res ).to.be.equal( role );
-        }
+          code.expect( element.toJSON() ).to.be.equal( role );
+        });
 
         // done() callback is required to end the test.
         server.stop( done );
@@ -265,7 +263,7 @@ lab.experiment( 'Roles Endpoint', function() {
 
     let options = {
       method: 'GET',
-      url: baseRoute + '/124124124124124124',
+      url: baseRoute + '/124124124124124',
       headers: {
         authorization: auth_tokens.admin
       }
@@ -1342,7 +1340,7 @@ lab.experiment( 'Roles Endpoint', function() {
 
     let options = {
       method: 'DELETE',
-      url: baseRoute + '/124124124124124124',
+      url: baseRoute + '/124124124124124',
       headers: {
         authorization: auth_tokens.admin
       }

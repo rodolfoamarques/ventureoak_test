@@ -196,15 +196,13 @@ lab.experiment( 'Translations Endpoint', function() {
       db.Translation.findAll()
       .then( translations => {
         // Expect result length to be equal to the database reply length
-        code.expect( result.length ).to.be.equal( translations.length );
+        code.expect( result.translations.length ).to.be.equal( translations.length );
 
-        for( let i=0; i<result.length; i++ ) {
-          let translation = translations[i].toJSON();
-          let res = result[i].toJSON();
-
+        result.translations.map( (element, index) => {
+          let translation = translations[index].toJSON();
           // Expect each translation in result to be equal to each translation in the database reply
-          code.expect( res ).to.be.equal( translation );
-        }
+          code.expect( element.toJSON() ).to.be.equal( translation );
+        })
 
         // done() callback is required to end the test.
         server.stop( done );
@@ -261,7 +259,7 @@ lab.experiment( 'Translations Endpoint', function() {
 
     let options = {
       method: 'GET',
-      url: baseRoute + '/124124124124124124',
+      url: baseRoute + '/124124124124124',
       headers: {
         authorization: auth_tokens.admin
       }
