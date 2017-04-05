@@ -78,10 +78,10 @@ Developed on Windows OS
     ```
 
   3. You also need to setup a PostgreSQL environment and initialize the following:
-    > create a database named: ventureoak_dev
-    > setup a user named: root
-    > with the password: root_pass
-    > grant access to database "ventureoak_dev" to user "root"
+    > open a connection to the database: `sudo -u postgres psql postgres`
+    > create a database named "ventureoak_dev": `CREATE DATABASE ventureoak_dev; CREATE EXTENSION unaccent; CREATE EXTENSION postgis;`
+    > setup a user named: "root" with password "root_pass": `CREATE USER root WITH PASSWORD 'root_pass';`
+    > grant access to database "ventureoak_dev" to user "root": `GRANT ALL PRIVILEGES ON DATABASE ventureoak_dev TO root;`
     >
     > If you already have your environment setup and want another username/password, simply update the file "config/database.json".
 
@@ -109,6 +109,8 @@ Developed on Windows OS
   ```
 
 5. Visualize the API documentation on: [http://localhost:3666/](http://localhost:3666/docs). This will allow you to easily see what routes are available, what information each route requires and to manually test and interact with the API. If you wish, feel free to access each route separately by their address in the browser (for example [http://localhost:3666/payslip](http://localhost:3666/payslip)) but remember this is an 'API only' project. No front-end whatsoever was developed and all route returns will be in a JSON object.
+
+6. As a friendly reminder, you can use the credentials `demo1@mail.com`, `demo2@mail.com` or `demo3@mail.com` with the password `password` to authenticate. For details on permissions, please refer to the seeder file [pre_populate_db](database/seeders/20170202021739-pre_populate_db.js).
 
 
 
