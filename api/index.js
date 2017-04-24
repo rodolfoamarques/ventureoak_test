@@ -6,6 +6,24 @@ let api;
 var db = require( '../database/models' );
 const configs = require( '../config/configs' );
 
+// Handler method for access control validation
+var aclHandlerFunc = (credentials, callback) => {
+  if( credentials ) {
+    return db.SystemRole.scope(['withPermissions'])
+      .findById( credentials.role_id )
+      .then( role => {
+        if( !role ) {
+          return callback( new Error('role_id_not_found'), null );
+        }
+        return callback( null, role.permissions );
+      });
+  }
+  else {
+    // TODO: THIS IS PROBABLY TOO RESTRICTIVE.
+    return callback( null, {} );
+  }
+}
+
 
 exports.init = ( server ) => {
 
@@ -59,23 +77,7 @@ exports.init = ( server ) => {
       },
       {
         register: require( 'hapi-route-acl' ),
-        options: {
-          permissionsFunc: (credentials, callback) => {
-            if( credentials ) {
-              return db.SystemRole.scope(['withPermissions'])
-                .findById( credentials.role_id )
-                .then( role => {
-                  if( !role ) {
-                    return callback( new Error('role_id_not_found'), null );
-                  }
-                  return callback( null, role.permissions );
-                });
-            } else {
-              // TODO: THIS IS PROBABLY TOO RESTRICTIVE.
-              return callback( null, {} );
-            }
-          }
-        }
+        options: { permissionsFunc: aclHandlerFunc }
       }
     ], err => {
       if( err ) { throw err; };
