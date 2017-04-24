@@ -1,4 +1,4 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var joi = require( 'joi' );
 var controller = require( './controller' );
@@ -14,7 +14,7 @@ module.exports = [
   config: {
     description: 'Create user',
     notes: 'Create user',
-    tags: ['api', 'users'],
+    tags: ['api', 'v1', 'users'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['users:create']
@@ -42,10 +42,10 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
-    id: 'paginated_users',
+    id: 'paginated_users_v1',
     description: 'List of all users',
     notes: 'List of all users',
-    tags: ['api', 'users'],
+    tags: ['api', 'v1', 'users'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['users:readAll']
@@ -65,7 +65,7 @@ module.exports = [
   config: {
     description: 'Show specific user',
     notes: 'Show specific user',
-    tags: ['api', 'users'],
+    tags: ['api', 'v1', 'users'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['users:readOne']
@@ -84,7 +84,7 @@ module.exports = [
   config: {
     description: 'Update specific user',
     notes: 'Update specific user',
-    tags: ['api', 'users'],
+    tags: ['api', 'v1', 'users'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['users:update']
@@ -117,7 +117,7 @@ module.exports = [
   config: {
     description: 'Delete specific user',
     notes: 'Delete specific user',
-    tags: ['api', 'users'],
+    tags: ['api', 'v1', 'users'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['users:destroy']

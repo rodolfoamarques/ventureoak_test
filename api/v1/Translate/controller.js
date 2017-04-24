@@ -2,8 +2,8 @@
 var boom = require( 'boom' );
 var Promise = require( 'bluebird' );
 
-var db = require( '../../database/models' );
-var pg_helper = require( '../../helpers/piglatin_helper' );
+var db = require( '../../../database/models' );
+var pg_helper = require( '../../../helpers/piglatin_helper' );
 
 
 // This function will create a new translation and return its details.

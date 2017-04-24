@@ -1,9 +1,7 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 let api;
 
-var ffs = require( 'final-fs' );
-var Promise = require( 'bluebird' );
 
 var db = require( '../database/models' );
 const configs = require( '../config/configs' );
@@ -30,12 +28,13 @@ exports.init = ( server ) => {
       require( 'akaya' ),
       {
         register: require( 'bissle' ),
-        options: { absolute: false } // absolute {boolean} - If the pagination links (not the Link header) should be absolute or not.
+        options: { absolute: false }
       },
       {
         register: require( 'hapi-swaggered' ),
         options: {
           schemes: ['http'],
+          stripPrefix: '/api',
           auth: false
         }
       },
@@ -48,10 +47,13 @@ exports.init = ( server ) => {
             field: 'authorization',
             scope: 'header',
             // defaultValue: 'defaultKey',
-            placeholder: 'Enter your apiKey here'
+            placeholder: 'Enter your JWT here'
           },
           swaggerOptions: {
-            validatorUrl: null
+            apisSorter: 'alpha',
+            validatorUrl: false,
+            docExpansion: 'list',
+            operationsSorter: 'method'
           }
         }
       },
@@ -107,16 +109,7 @@ exports.init = ( server ) => {
     }
   );
 
-  // Look through the routes in all the subdirectories
-  // of the API and create a new route for each one
-  ffs.readdirRecursiveSync( __dirname, true )
-  .forEach( file => {
-
-    if( file.endsWith('routes.js') ) {
-      let routes = require( './' + file );
-      api.route( routes );
-    }
-  });
+  require('./v1').loadRoutes( api );
 
   return api;
 };

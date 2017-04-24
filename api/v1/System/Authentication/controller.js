@@ -1,12 +1,11 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var Boom = require( 'boom' );
 var bcrypt = require( 'bcrypt' );
 var moment = require( 'moment' );
-var Promise = require("bluebird");
 
-var db = require( '../../../database/models' );
-var jwt_helper = require( '../../../helpers/jwt_helper' );
+var db = require( '../../../../database/models' );
+var jwt_helper = require( '../../../../helpers/jwt_helper' );
 
 
 // This function will verify the credentials of a login request

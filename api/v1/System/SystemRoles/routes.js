@@ -1,4 +1,4 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var joi = require( 'joi' );
 var controller = require( './controller' );
@@ -13,7 +13,7 @@ module.exports = [
   config: {
     description: 'Create new role',
     notes: 'Create new role',
-    tags: ['api', 'system_roles'],
+    tags: ['api', 'v1', 'system_roles'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['system_roles:create']
@@ -36,10 +36,10 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
-    id: 'paginated_system_roles',
+    id: 'paginated_system_roles_v1',
     description: 'List of all system roles',
     notes: 'List of all system roles',
-    tags: ['api', 'system_roles'],
+    tags: ['api', 'v1', 'system_roles'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['system_roles:readAll']
@@ -59,7 +59,7 @@ module.exports = [
   config: {
     description: 'Show specific system role',
     notes: 'Show specific system role',
-    tags: ['api', 'system_roles'],
+    tags: ['api', 'v1', 'system_roles'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['system_roles:readOne']
@@ -78,7 +78,7 @@ module.exports = [
   config: {
     description: 'Update specific system role',
     notes: 'Update specific system role',
-    tags: ['api', 'system_roles'],
+    tags: ['api', 'v1', 'system_roles'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['system_roles:update']
@@ -106,7 +106,7 @@ module.exports = [
   config: {
     description: 'Delete specific system role',
     notes: 'Delete specific system role',
-    tags: ['api', 'system_roles'],
+    tags: ['api', 'v1', 'system_roles'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['system_roles:destroy']

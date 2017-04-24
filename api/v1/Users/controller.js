@@ -1,10 +1,9 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var Boom = require( 'boom' );
 var Bcrypt = require( 'bcrypt' );
-var Promise = require( 'bluebird' );
 
-var db = require( '../../database/models' );
+var db = require( '../../../database/models' );
 
 
 // This function will create a new user and return its details.

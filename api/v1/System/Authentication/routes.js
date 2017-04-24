@@ -1,4 +1,4 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var joi = require( 'joi' );
 var controller = require( './controller' );
@@ -15,7 +15,7 @@ module.exports = [
   config: {
     description: 'Login',
     notes: 'Login',
-    tags: ['api', 'authentication'],
+    tags: ['api', 'v1', 'authentication'],
     auth: false,
     validate: {
       payload:
@@ -32,7 +32,7 @@ module.exports = [
   config: {
     description: 'Registration of a new user',
     notes: 'Registration of a new user',
-    tags: ['api', 'authentication'],
+    tags: ['api', 'v1', 'authentication'],
     auth: false,
     validate: {
       payload:

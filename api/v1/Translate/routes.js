@@ -1,4 +1,4 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var joi = require( 'joi' );
 var controller = require( './controller' );
@@ -14,7 +14,7 @@ module.exports = [
   config: {
     description: 'Trasnlate English text to PigLatin',
     notes: 'Trasnlate English text to PigLatin',
-    tags: ['api', 'translations'],
+    tags: ['api', 'v1', 'translations'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['translations:create']
@@ -37,10 +37,10 @@ module.exports = [
   path: `/${endpoint}`,
   handler: controller.readAll,
   config: {
-    id: 'paginated_translations',
+    id: 'paginated_translations_v1',
     description: 'List of all translations',
     notes: 'List of all translations',
-    tags: ['api', 'translations'],
+    tags: ['api', 'v1', 'translations'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['translations:readAll']
@@ -60,7 +60,7 @@ module.exports = [
   config: {
     description: 'Show previously translated text',
     notes: 'Show previously translated text',
-    tags: ['api', 'translations'],
+    tags: ['api', 'v1', 'translations'],
     plugins: {
       hapiRouteAcl: {
         permissions: ['translations:readOne']
