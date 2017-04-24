@@ -24,6 +24,19 @@ var aclHandlerFunc = (credentials, callback) => {
   }
 }
 
+// Handler method for authentication validation
+var authHandlerFunc = (decoded, request, callback) => {
+  db.User.findById( decoded.id )
+  .then( user => {
+    if( !user ) {
+      return Promise.reject( 'error_in_jwt_validation' );
+    } else {
+      return callback( null, true, user.toJSON() );
+    }
+  })
+  .catch( err => callback(new Error(err), false) )
+}
+
 
 exports.init = ( server ) => {
 
@@ -85,17 +98,7 @@ exports.init = ( server ) => {
       // Setting the authorization strategy
       api.auth.strategy( 'jwt', 'jwt', {
         key: configs.api_secret_key,
-        validateFunc: (decoded, request, callback) => {
-          db.User.findById( decoded.id )
-          .then( user => {
-            if( !user ) {
-              return Promise.reject();
-            } else {
-              return callback( null, true, user.toJSON() );
-            }
-          })
-          .catch( () => callback(new Error('error_found_in_jwt_validate_function'), false) )
-        },
+        validateFunc: authHandlerFunc,
         verifyOptions: { algorithms: ['HS256'] }
       });
       api.auth.default( 'jwt' );
