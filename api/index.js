@@ -72,11 +72,6 @@ exports.init = ( server ) => {
       require( 'inert' ),
       require( 'vision' ),
       require( 'hapi-auth-jwt2' ),
-      require( 'akaya' ),
-      {
-        register: require( 'bissle' ),
-        options: { absolute: false }
-      },
       {
         register: require( 'hapi-swaggered' ),
         options: {

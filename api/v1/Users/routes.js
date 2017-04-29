@@ -53,8 +53,8 @@ module.exports = [
     },
     validate: {
       query: {
-        per_page: joi.number().integer().min(1).description('Amount of elements per page'),
-        page: joi.number().integer().min(1).description('Page identifier')
+        limit: joi.number().integer().min(1).description('Amount of elements per page'),
+        offset: joi.number().integer().min(0).description('Page offset')
       }
     }
   }
