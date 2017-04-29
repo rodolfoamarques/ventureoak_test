@@ -1,5 +1,10 @@
 {
 
+  "defaults": {
+    "host": "127.0.0.1",
+    "port": 3666
+  },
+
   "api_secret_key": "thisisarandomkey",
 
   "dictionary": {

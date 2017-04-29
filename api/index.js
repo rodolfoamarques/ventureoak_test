@@ -1,8 +1,8 @@
 'use strict';
 
+// var fs = require( 'fs' );
+
 let api;
-
-
 var db = require( '../database/models' );
 const configs = require( '../config/configs' );
 
@@ -42,13 +42,29 @@ exports.init = ( server ) => {
 
   if( api ) { return api; }
 
+  // server.connection({
+  //   labels: [ 'api_secure' ],
+  //   host: process.env.SERVICE_HOST || configs.defaults.host,
+  //   port: (Number( process.env.SERVICE_PORT_HTTPS ) || configs.defaults.port),
+  //   routes: {
+  //     cors: {
+  //       origin: [ '*' ],
+  //       credentials: true
+  //     }
+  //   },
+  //   tls: {
+  //     key: fs.readFileSync( process.env.CERT_KEY ),
+  //     cert: fs.readFileSync( process.env.CERT_CRT )
+  //   }
+  // });
+  // api = server.select( 'api_secure' );
+
   server.connection({
     labels: ['api'],
-    host: '127.0.0.1',
-    port: 3666,
+    host: (process.env.SERVICE_HOST || configs.defaults.host),
+    port: (Number( process.env.SERVICE_PORT_HTTP ) || configs.defaults.port),
     routes: { cors: true }
   });
-
   api = server.select( 'api' );
 
   api.register(
@@ -107,9 +123,7 @@ exports.init = ( server ) => {
         path: '/',
         method: 'GET',
         handler: (request, reply) => reply.redirect( 'docs' ),
-        config: {
-          auth: false
-        }
+        config: { auth: false }
       });
     }
   );
