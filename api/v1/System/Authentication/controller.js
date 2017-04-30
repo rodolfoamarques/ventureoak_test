@@ -1,10 +1,11 @@
 'use strict';
 
 var Boom = require( 'boom' );
-var bcrypt = require( 'bcrypt' );
+var Bcrypt = require( 'bcrypt' );
 var moment = require( 'moment' );
 
 var db = require( '../../../../database/models' );
+const configs = require( '../../../../config/configs' );
 var jwt_helper = require( '../../../../helpers/jwt_helper' );
 
 
@@ -56,13 +57,12 @@ exports.login = ( request, reply ) =>
   );
 
 
-
 // This function will create a new user and return its details.
 exports.register = ( request, reply ) =>
   db.sequelize.transaction( t =>
 
     // check if email already exists
-    db.User.findOne({ where: { email: request.payload.email }/*, paranoid: false*/ })
+    db.User.findOne({ where: { email: request.payload.email, deleted_at: null } })
     .then( user =>
       user ?
         Promise.reject( Boom.badRequest('email_already_exists') ) :
@@ -76,13 +76,14 @@ exports.register = ( request, reply ) =>
         Promise.reject( Boom.badRequest('passwords_do_not_match') )
     )
 
+    // hash the password
+    .then( () => Bcrypt.hash(request.payload.password, configs.saltRounds) )
     // create the user
-    .then( () => {
-      // hash the user's password
-      request.payload.password = bcrypt.hashSync( request.payload.password, bcrypt.genSaltSync(10) );
+    .then( hash => {
+      request.payload.password = hash;
+      delete request.payload.password_confirmation;
       request.payload.role_id = 3;
 
-      // save the user in the database
       return db.User.create( request.payload, { transaction: t } )
         .then( user => {
           user = user.toJSON();
@@ -90,6 +91,7 @@ exports.register = ( request, reply ) =>
           return user;
         });
     })
+
   )
   // reply with the information
   .then( reply )

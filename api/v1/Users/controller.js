@@ -4,6 +4,7 @@ var Boom = require( 'boom' );
 var Bcrypt = require( 'bcrypt' );
 
 var db = require( '../../../database/models' );
+const configs = require( '../../../config/configs' );
 
 
 // This function will create a new user and return its details.
@@ -33,9 +34,11 @@ exports.create = ( request, reply ) =>
         Promise.reject( Boom.badRequest('passwords_do_not_match') )
     )
 
+    // hash the password
+    .then( () => Bcrypt.hash(request.payload.password, configs.saltRounds) )
     // create the user
-    .then( () => {
-      request.payload.password = Bcrypt.hashSync( request.payload.password, Bcrypt.genSaltSync(10) );
+    .then( hash => {
+      request.payload.password = hash;
 
       return db.User.create( request.payload, { transaction: t } )
         .then( user => {
@@ -66,10 +69,6 @@ exports.readAll = ( request, reply ) => {
   // retrieve all users from database
   db.User.scope([ 'defaultScope', 'withRole' ]).findAndCount( query )
   // reply with the information
-  .then( cenas => {
-    console.log(request.query);
-    return cenas;
-  })
   .then( reply )
   // catch any error that may have been thrown
   .catch( err =>

@@ -5,6 +5,7 @@
     "port": 3666
   },
 
+  "saltRounds": 15,
   "api_secret_key": "thisisarandomkey",
 
   "dictionary": {
