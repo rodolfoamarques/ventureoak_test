@@ -117,10 +117,9 @@ module.exports = [
         }
       },
       validate: {
-        params:
-          joi.object({
-            id: joi.number().integer().min(1).required().description('User\'s reference id')
-          })
+        params: {
+          id: joi.number().integer().min(1).required().description('User\'s reference id')
+        }
       }
     }
   }

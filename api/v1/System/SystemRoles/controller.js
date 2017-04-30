@@ -6,46 +6,52 @@ var db = require( '../../../../database/models' );
 
 // This function will create a new system role and return its details.
 exports.create = ( request, reply ) =>
-  db.sequelize.transaction( t =>
+  db.sequelize.transaction( t => {
+    let query = {
+      where: {
+        name: request.payload.name,
+        deleted_at: null
+      }
+    };
 
     // check if name already exists
-    db.SystemRole.findOne( { where: { name: request.payload.name, deleted_at: null } }, { transaction: t } )
-    .then( role =>
-      role ?
-        Promise.reject( Boom.badRequest('name_already_exists') ) :
-        null
-    )
-    .then( () => {
-      let new_role = {
-        name: request.payload.name,
-        permissions: JSON.parse( request.payload.permissions )
-      };
+    return db.SystemRole.findOne( query, { transaction: t } )
+      .then( role =>
+        role ?
+          Promise.reject( Boom.badRequest('name_already_exists') ) :
+          null
+      )
+      .then( () => {
+        let new_role = {
+          name: request.payload.name,
+          permissions: JSON.parse( request.payload.permissions )
+        };
 
-      for( var route in new_role.permissions ) {
-        if( new_role.permissions.hasOwnProperty(route) ) {
+        for( var route in new_role.permissions ) {
+          if( new_role.permissions.hasOwnProperty(route) ) {
 
-          // TODO: check if 'route' is a valid route
+            // TODO: check if 'route' is a valid route
 
-          for( var permission in new_role.permissions[route] ) {
-            if( new_role.permissions[route].hasOwnProperty(permission) ) {
+            for( var permission in new_role.permissions[route] ) {
+              if( new_role.permissions[route].hasOwnProperty(permission) ) {
 
-              // TODO: check if 'permission' is a valid permission for the current route
+                // TODO: check if 'permission' is a valid permission for the current route
 
-              if( typeof(new_role.permissions[route][permission]) !== 'boolean' ) {
-                return Promise.reject( Boom.badRequest('permissions_must_be_boolean_values') );
+                if( typeof(new_role.permissions[route][permission]) !== 'boolean' ) {
+                  return Promise.reject( Boom.badRequest('permissions_must_be_boolean_values') );
+                }
+
               }
-
             }
+
           }
-
         }
-      }
 
-      return new_role;
-    })
-    // create the system role
-    .then( new_role => db.SystemRole.create(new_role, { transaction: t }) )
-  )
+        return new_role;
+      })
+      // create the system role
+      .then( new_role => db.SystemRole.create(new_role, { transaction: t }) );
+  })
   // reply with the information
   .then( reply )
   // catch any error that may have been thrown
@@ -57,17 +63,24 @@ exports.create = ( request, reply ) =>
 
 
 // This function returns the details of all system roles
-exports.readAll = ( request, reply ) =>
+exports.readAll = ( request, reply ) => {
+  let query = {
+    order: 'id',
+    limit: request.query.limit,
+    offset: request.query.offset
+  };
+
   // retrieve all system roles from database
-  db.SystemRole.scope([ 'withPermissions' ]).findAll()
-  // reply with the information
-  .then( roles => reply.bissle({ roles }, { key: "roles"}) )
-  // catch any error that may have been thrown
-  .catch( err =>
-    err.isBoom ?
-      reply( err ) :
-      reply( Boom.badImplementation(err) )
-  );
+  return db.SystemRole.scope([ 'withPermissions' ]).findAndCount( query )
+    // reply with the information
+    .then( reply )
+    // catch any error that may have been thrown
+    .catch( err =>
+      err.isBoom ?
+        reply( err ) :
+        reply( Boom.badImplementation(err) )
+    );
+}
 
 
 // This function returns the details of a specific system role
@@ -109,16 +122,22 @@ exports.update = ( request, reply ) =>
     // check if new name already exists for another system role
     .then( role => {
       if( request.payload.name ) {
-        return db.SystemRole.findOne( { where: {name: request.payload.name, id: {$ne: request.params.id}, deleted_at: null} }, { transaction: t } )
-        .then( duplicated_name_role =>
-          duplicated_name_role ?
-            Promise.reject( Boom.badRequest('name_already_exists') ) :
-            role
-        );
+        let query = {
+          where: {
+            name: request.payload.name,
+            id: { $ne: request.params.id },
+            deleted_at: null
+          }
+        };
+
+        return db.SystemRole.findOne( query, { transaction: t } )
+          .then( duplicated_name_role =>
+            duplicated_name_role ?
+              Promise.reject( Boom.badRequest('name_already_exists') ) :
+              role
+          );
       }
-      else {
-        return role;
-      }
+      else return role;
     })
 
     // update the system role

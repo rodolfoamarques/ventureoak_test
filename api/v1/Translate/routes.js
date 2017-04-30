@@ -23,12 +23,7 @@ module.exports = [
     validate: {
       payload:
         joi.object({
-          id: joi.any().forbidden(),
           english_text: joi.string().required().description('English text to translate'),
-          piglatin_text: joi.any().forbidden(),
-          created_at: joi.any().forbidden(),
-          updated_at: joi.any().forbidden(),
-          deleted_at: joi.any().forbidden()
         }).meta({ className: 'TranslationCreateModel' }).description('Create new translation form')
     }
   }
@@ -48,8 +43,8 @@ module.exports = [
     },
     validate: {
       query: {
-        per_page: joi.number().integer().min(1).description('Amount of elements per page'),
-        page: joi.number().integer().min(1).description('Page identifier')
+        limit: joi.number().integer().min(1).description('Amount of elements per page'),
+        offset: joi.number().integer().min(0).description('Page offset')
       }
     }
   }

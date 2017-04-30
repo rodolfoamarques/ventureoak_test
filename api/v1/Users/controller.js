@@ -20,7 +20,16 @@ exports.create = ( request, reply ) =>
     )
 
     // check if email already exists
-    .then( () => db.User.findOne({ where: { email: request.payload.email, deleted_at: null } }) )
+    .then( () => {
+      let query = {
+        where: {
+          email: request.payload.email,
+          deleted_at: null
+        }
+      };
+
+      return db.User.findOne( query );
+    })
     .then( user =>
       user ?
         Promise.reject( Boom.badRequest('email_already_exists') ) :
@@ -139,8 +148,15 @@ exports.update = ( request, reply ) =>
     // check if new email already exists for another user
     .then( user => {
       if( request.payload.email ) {
-        return db.User
-          .findOne({ where: {email: request.payload.email, id: {$ne: request.params.id}, deleted_at: null} })
+        let query = {
+          where: {
+            email: request.payload.email,
+            id: { $ne: request.params.id },
+            deleted_at: null
+          }
+        };
+
+        return db.User.findOne( query )
           .then( duplicated_email_user =>
             duplicated_email_user ?
               Promise.reject( Boom.badRequest('email_already_exists') ) :

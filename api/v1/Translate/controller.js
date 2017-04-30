@@ -1,34 +1,36 @@
 
 var boom = require( 'boom' );
-var Promise = require( 'bluebird' );
 
 var db = require( '../../../database/models' );
 var pg_helper = require( '../../../helpers/piglatin_helper' );
 
 
 // This function will create a new translation and return its details.
-exports.create = ( request, reply ) => {
-  db.sequelize.transaction( t =>
+exports.create = ( request, reply ) =>
+  db.sequelize.transaction( t => {
+    let query = {
+      where: { english_text: request.payload.english_text },
+    };
 
     // check if translation exists
-    db.Translation.findOne( { where: { english_text: request.payload.english_text } }, { transaction: t } )
-    .then( translation => {
-      if( translation ) {
-        // and return it
-        return translation;
-      }
-      else {
-        // or create a new translation
-        let new_translation = {
-          english_text: request.payload.english_text,
-          piglatin_text: pg_helper.translate_text( request.payload.english_text )
-        };
+    return db.Translation.findOne( query, { transaction: t } )
+      .then( translation => {
+        if( translation ) {
+          // and return it
+          return translation;
+        }
+        else {
+          // or create a new translation
+          let new_translation = {
+            english_text: request.payload.english_text,
+            piglatin_text: pg_helper.translate_text( request.payload.english_text )
+          };
 
-        // and save it to database
-        return db.Translation.create(new_translation, { transaction: t })
-      }
-    })
-  )
+          // and save it to database
+          return db.Translation.create( new_translation, { transaction: t } )
+        }
+      });
+  })
   // reply with the information
   .then( reply )
   // catch any error that may have been thrown
@@ -37,21 +39,27 @@ exports.create = ( request, reply ) => {
       reply( err ) :
       reply( boom.badImplementation(err) )
   );
-}
 
 
 // This function returns the details of all translations
-exports.readAll = ( request, reply ) =>
+exports.readAll = ( request, reply ) => {
+  let query = {
+    order: 'id',
+    limit: request.query.limit,
+    offset: request.query.offset
+  };
+
   // retrieve all translations from database
-  db.Translation.findAll()
-  // reply with the information
-  .then( translations => reply.bissle({ translations }, { key: "translations"}) )
-  // catch any error that may have been thrown
-  .catch( err =>
-    err.isBoom ?
-      reply( err ) :
-      reply( boom.badImplementation(err) )
-  );
+  return db.Translation.findAndCount( query )
+    // reply with the information
+    .then( reply )
+    // catch any error that may have been thrown
+    .catch( err =>
+      err.isBoom ?
+        reply( err ) :
+        reply( boom.badImplementation(err) )
+    );
+}
 
 
 // This function returns the details of a specific translation
