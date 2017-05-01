@@ -15,9 +15,7 @@ module.exports = [
       notes: 'Create new system role',
       tags: ['api', 'v1', 'system_roles'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['system_roles:create']
-        }
+        hapiRouteAcl: { permissions: ['system_roles:create'] }
       },
       validate: {
         payload:
@@ -38,9 +36,7 @@ module.exports = [
       notes: 'List of all system roles',
       tags: ['api', 'v1', 'system_roles'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['system_roles:readAll']
-        }
+        hapiRouteAcl: { permissions: ['system_roles:readAll'] }
       },
       validate: {
         query: {
@@ -59,9 +55,7 @@ module.exports = [
       notes: 'Show specific system role',
       tags: ['api', 'v1', 'system_roles'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['system_roles:readOne']
-        }
+        hapiRouteAcl: { permissions: ['system_roles:readOne'] }
       },
       validate: {
         params: {
@@ -79,9 +73,7 @@ module.exports = [
       notes: 'Update specific system role',
       tags: ['api', 'v1', 'system_roles'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['system_roles:update']
-        }
+        hapiRouteAcl: { permissions: ['system_roles:update'] }
       },
       validate: {
         params: {
@@ -104,9 +96,7 @@ module.exports = [
       notes: 'Delete specific system role',
       tags: ['api', 'v1', 'system_roles'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['system_roles:destroy']
-        }
+        hapiRouteAcl: { permissions: ['system_roles:destroy'] }
       },
       validate: {
         params: {

@@ -16,9 +16,7 @@ module.exports = [
     notes: 'Trasnlate English text to PigLatin',
     tags: ['api', 'v1', 'translations'],
     plugins: {
-      hapiRouteAcl: {
-        permissions: ['translations:create']
-      }
+      hapiRouteAcl: { permissions: ['translations:create'] }
     },
     validate: {
       payload:
@@ -37,9 +35,7 @@ module.exports = [
     notes: 'List of all translations',
     tags: ['api', 'v1', 'translations'],
     plugins: {
-      hapiRouteAcl: {
-        permissions: ['translations:readAll']
-      }
+      hapiRouteAcl: { permissions: ['translations:readAll'] }
     },
     validate: {
       query: {
@@ -57,9 +53,7 @@ module.exports = [
     notes: 'Show previously translated text',
     tags: ['api', 'v1', 'translations'],
     plugins: {
-      hapiRouteAcl: {
-        permissions: ['translations:readOne']
-      }
+      hapiRouteAcl: { permissions: ['translations:readOne'] }
     },
     validate: {
       params: {

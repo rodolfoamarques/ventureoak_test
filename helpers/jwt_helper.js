@@ -1,4 +1,4 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var moment = require( 'moment' );
 var JWT = require( 'jsonwebtoken' );

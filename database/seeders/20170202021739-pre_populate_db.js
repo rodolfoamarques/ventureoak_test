@@ -1,10 +1,11 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var bcrypt = require( 'bcrypt' );
-var moment = require( 'moment' );
+
+const configs = require( '../../config/configs' );
 
 var newDate = new Date();
-var password = bcrypt.hashSync( 'password', bcrypt.genSaltSync(10) );
+var password = bcrypt.hashSync( 'password', configs.saltRounds );
 
 
 module.exports = {

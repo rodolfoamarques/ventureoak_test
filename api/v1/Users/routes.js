@@ -16,9 +16,7 @@ module.exports = [
       notes: 'Create user',
       tags: ['api', 'v1', 'users'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['users:create']
-        }
+        hapiRouteAcl: { permissions: ['users:create'] }
       },
       validate: {
         payload:
@@ -42,9 +40,7 @@ module.exports = [
       notes: 'List of all users',
       tags: ['api', 'v1', 'users'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['users:readAll']
-        }
+        hapiRouteAcl: { permissions: ['users:readAll'] }
       },
       validate: {
         query: {
@@ -63,9 +59,7 @@ module.exports = [
       notes: 'Show specific user',
       tags: ['api', 'v1', 'users'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['users:readOne']
-        }
+        hapiRouteAcl: { permissions: ['users:readOne'] }
       },
       validate: {
         params: {
@@ -83,9 +77,7 @@ module.exports = [
       notes: 'Update specific user',
       tags: ['api', 'v1', 'users'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['users:update']
-        }
+        hapiRouteAcl: { permissions: ['users:update'] }
       },
       validate: {
         params: {
@@ -112,9 +104,7 @@ module.exports = [
       notes: 'Delete specific user',
       tags: ['api', 'v1', 'users'],
       plugins: {
-        hapiRouteAcl: {
-          permissions: ['users:destroy']
-        }
+        hapiRouteAcl: { permissions: ['users:destroy'] }
       },
       validate: {
         params: {
