@@ -43,6 +43,7 @@ module.exports = [
             password_confirmation: joi.string().required().description('Password confirmation'),
             full_name: joi.string().description('User\'s real full name'),
           }).meta({ className: 'registrationModel' }).description('Register new user form')
+      }
     }
   }
 ];
