@@ -1,12 +1,12 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var Boom = require( 'boom' );
-var bcrypt = require( 'bcrypt' );
+var Bcrypt = require( 'bcrypt' );
 var moment = require( 'moment' );
-var Promise = require("bluebird");
 
-var db = require( '../../../database/models' );
-var jwt_helper = require( '../../../helpers/jwt_helper' );
+var db = require( '../../../../database/models' );
+const configs = require( '../../../../config/configs' );
+var jwt_helper = require( '../../../../helpers/jwt_helper' );
 
 
 // This function will verify the credentials of a login request
@@ -29,7 +29,7 @@ exports.login = ( request, reply ) =>
   )
   // validate the provided password
   .then( user =>
-    bcrypt.compareSync(request.payload.password, user.password) ?
+    Bcrypt.compareSync(request.payload.password, user.password) ?
       user :
       Promise.reject( Boom.unauthorized('incorrect_password') )
   )
@@ -57,41 +57,47 @@ exports.login = ( request, reply ) =>
   );
 
 
-
 // This function will create a new user and return its details.
 exports.register = ( request, reply ) =>
-  db.sequelize.transaction( t =>
+  db.sequelize.transaction( t => {
+    let query = {
+      where: {
+        email: request.payload.email,
+        deleted_at: null
+      }
+    };
 
     // check if email already exists
-    db.User.findOne({ where: { email: request.payload.email }/*, paranoid: false*/ })
-    .then( user =>
-      user ?
-        Promise.reject( Boom.badRequest('email_already_exists') ) :
-        null
-    )
+    return db.User.findOne( query )
+      .then( user =>
+        user ?
+          Promise.reject( Boom.badRequest('email_already_exists') ) :
+          null
+      )
 
-    // check if password and password_confirmation match
-    .then( () =>
-      request.payload.password === request.payload.password_confirmation ?
-        null :
-        Promise.reject( Boom.badRequest('passwords_do_not_match') )
-    )
+      // check if password and password_confirmation match
+      .then( () =>
+        request.payload.password === request.payload.password_confirmation ?
+          null :
+          Promise.reject( Boom.badRequest('passwords_do_not_match') )
+      )
 
-    // create the user
-    .then( () => {
-      // hash the user's password
-      request.payload.password = bcrypt.hashSync( request.payload.password, bcrypt.genSaltSync(10) );
-      request.payload.role_id = 3;
+      // hash the password
+      .then( () => Bcrypt.hash(request.payload.password, configs.saltRounds) )
+      // create the user
+      .then( hash => {
+        request.payload.password = hash;
+        delete request.payload.password_confirmation;
+        request.payload.role_id = 3;
 
-      // save the user in the database
-      return db.User.create( request.payload, { transaction: t } )
-        .then( user => {
-          user = user.toJSON();
-          delete user.password;
-          return user;
-        });
-    })
-  )
+        return db.User.create( request.payload, { transaction: t } )
+          .then( user => {
+            user = user.toJSON();
+            delete user.password;
+            return user;
+          });
+      });
+  })
   // reply with the information
   .then( reply )
   // catch any error that may have been thrown

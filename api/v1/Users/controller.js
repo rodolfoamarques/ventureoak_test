@@ -1,10 +1,10 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var Boom = require( 'boom' );
 var Bcrypt = require( 'bcrypt' );
-var Promise = require( 'bluebird' );
 
-var db = require( '../../database/models' );
+var db = require( '../../../database/models' );
+const configs = require( '../../../config/configs' );
 
 
 // This function will create a new user and return its details.
@@ -20,7 +20,16 @@ exports.create = ( request, reply ) =>
     )
 
     // check if email already exists
-    .then( () => db.User.findOne({ where: { email: request.payload.email, deleted_at: null } }) )
+    .then( () => {
+      let query = {
+        where: {
+          email: request.payload.email,
+          deleted_at: null
+        }
+      };
+
+      return db.User.findOne( query );
+    })
     .then( user =>
       user ?
         Promise.reject( Boom.badRequest('email_already_exists') ) :
@@ -34,12 +43,12 @@ exports.create = ( request, reply ) =>
         Promise.reject( Boom.badRequest('passwords_do_not_match') )
     )
 
+    // hash the password
+    .then( () => Bcrypt.hash(request.payload.password, configs.saltRounds) )
     // create the user
-    .then( () => {
-      // encrypt the user's password
-      request.payload.password = Bcrypt.hashSync( request.payload.password, Bcrypt.genSaltSync(10) );
+    .then( hash => {
+      request.payload.password = hash;
 
-      // create the user
       return db.User.create( request.payload, { transaction: t } )
         .then( user => {
           user = user.toJSON();
@@ -59,17 +68,24 @@ exports.create = ( request, reply ) =>
 
 
 // This function returns the details of all users
-exports.readAll = ( request, reply ) =>
+exports.readAll = ( request, reply ) => {
+  let query = {
+    order: 'id',
+    limit: request.query.limit,
+    offset: request.query.offset
+  };
+
   // retrieve all users from database
-  db.User.scope([ 'defaultScope', 'withRole' ]).findAll()
+  db.User.scope([ 'defaultScope', 'withRole' ]).findAndCount( query )
   // reply with the information
-  .then( users => reply.bissle({ users }, { key: "users"}) )
+  .then( reply )
   // catch any error that may have been thrown
   .catch( err =>
     err.isBoom ?
       reply( err ) :
       reply( Boom.badImplementation(err) )
   );
+}
 
 
 // This function returns the details of a specific user
@@ -80,7 +96,6 @@ exports.readOne = ( request, reply ) =>
   .then( user =>
     !user ?
       Promise.reject( Boom.notFound('user_id_not_found') ) :
-      // return the user
       user
   )
   // reply with the information
@@ -104,7 +119,6 @@ exports.update = ( request, reply ) =>
     .then( user =>
       !user ?
         Promise.reject( Boom.notFound('user_id_not_found') ) :
-        // return requested user
         user
     )
 
@@ -118,9 +132,7 @@ exports.update = ( request, reply ) =>
               user
           );
       }
-      else {
-        return user;
-      }
+      else return user;
     })
 
     // check if password and password_confirmation match
@@ -130,24 +142,28 @@ exports.update = ( request, reply ) =>
           user :
           Promise.reject( Boom.badRequest('passwords_do_not_match') );
       }
-      else {
-        return user;
-      }
+      else return user;
     })
 
     // check if new email already exists for another user
     .then( user => {
       if( request.payload.email ) {
-        return db.User.findOne({ where: {email: request.payload.email, id: {$ne: request.params.id}, deleted_at: null} })
-        .then( duplicated_email_user =>
-          duplicated_email_user ?
-            Promise.reject( Boom.badRequest('email_already_exists') ) :
-            user
-        );
+        let query = {
+          where: {
+            email: request.payload.email,
+            id: { $ne: request.params.id },
+            deleted_at: null
+          }
+        };
+
+        return db.User.findOne( query )
+          .then( duplicated_email_user =>
+            duplicated_email_user ?
+              Promise.reject( Boom.badRequest('email_already_exists') ) :
+              user
+          );
       }
-      else {
-        return user;
-      }
+      else return user;
     })
 
     // update the user
@@ -171,7 +187,6 @@ exports.destroy = ( request, reply ) =>
   .then( user =>
     !user ?
       Promise.reject( Boom.notFound('user_id_not_found') ) :
-      // destroy the retrieved user (soft-delete)
       user.destroy()
   )
   // reply with the information

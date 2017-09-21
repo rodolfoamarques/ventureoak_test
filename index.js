@@ -1,4 +1,4 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 var moment = require( 'moment' );
 
@@ -10,7 +10,7 @@ let api = require('./api').init( server );
 server.start( err => {
   if( err ) { throw err; }
 
-  console.log( ['initialize'], moment() );
+  console.log( ['initialize'], moment().format('MMMM Do YYYY, HH:mm:ss Z') );
   console.log( ['initialize'], 'Server running' );
   console.log( ['initialize'], 'API at: ' + server.select('api').info.uri );
 });
