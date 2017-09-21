@@ -101,27 +101,25 @@ Developed on Windows OS
   > npm ls --depth=0
 
   ventureoak_test@1.0.0 ./ventureoak_test
-  +-- akaya@2.1.3
-  +-- bcrypt@1.0.2
-  +-- bissle@1.2.3
-  +-- boom@4.3.1
-  +-- code@4.0.0
-  +-- final-fs@1.6.1
-  +-- hapi@16.1.1
-  +-- hapi-auth-jwt2@7.2.4
-  +-- hapi-route-acl@1.0.3
-  +-- hapi-swaggered@2.9.0
-  +-- hapi-swaggered-ui@2.6.0
-  +-- inert@4.2.0
-  +-- istanbul@0.4.5
-  +-- joi@10.4.1
-  +-- jsonwebtoken@7.4.0
-  +-- lab@13.0.2
-  +-- moment@2.18.1
-  +-- pg@6.1.5
-  +-- sequelize@3.30.4
-  +-- sequelize-cli@2.7.0
-  `-- vision@4.1.1
+  ├── bcrypt@1.0.3
+  ├── boom@5.2.0
+  ├── code@5.1.0
+  ├── final-fs@1.6.1
+  ├── hapi@16.6.0
+  ├── hapi-auth-jwt2@7.3.0
+  ├── hapi-route-acl@1.0.3
+  ├── hapi-swaggered@2.10.0
+  ├── hapi-swaggered-ui@2.6.0
+  ├── inert@4.2.1
+  ├── istanbul@0.4.5
+  ├── joi@11.0.3
+  ├── jsonwebtoken@8.0.1
+  ├── lab@14.3.0
+  ├── moment@2.18.1
+  ├── pg@7.3.0
+  ├── sequelize@4.10.0
+  ├── sequelize-cli@3.0.0-3
+  └── vision@4.1.1
   ```
 
 2. Next, migrate the database (this step assumes you already created an empty database called "ventureoak_dev"):
