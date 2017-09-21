@@ -76,7 +76,7 @@ exports.init = ( server ) => {
         register: require( 'hapi-swaggered' ),
         options: {
           schemes: ['http'],
-          stripPrefix: '/api',
+          stripPrefix: '/api/v',
           auth: false
         }
       },
