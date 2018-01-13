@@ -45,5 +45,22 @@ module.exports = [
           }).meta({ className: 'registrationModel' }).description('Register new user form')
       }
     }
+  },
+  {
+    method: 'POST',
+    path: `/${endpoint}/recover`,
+    handler: controller.recover,
+    config: {
+      description: 'Password recovery',
+      notes: 'Password recovery',
+      tags: ['api', 'v1', 'authentication'],
+      auth: false,
+      validate: {
+        payload:
+          joi.object({
+            email: joi.string().email().regex(email_regex).required().description('User\'s login email')
+          }).meta({ className: 'recoverModel' }).description('Password recovery form')
+      }
+    }
   }
 ];

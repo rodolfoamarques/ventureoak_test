@@ -70,12 +70,23 @@ module.exports = function( sequelize, Sequelize ) {
 
     classMethods: {
       associate: function( db ) {
-        User.belongsTo( db.SystemRole, { as: 'role' } );
+        // User.belongsTo( db.SystemRole, { as: 'role' } );
+        User.hasMany( db.SystemEndpoint, { as: 'permissions' } );
       },
 
       addScopes: ( db ) => {
         User.addScope( 'withRole', {
-          include: [{ model: db.SystemRole, as: 'role' }],
+          include: [
+            { model: db.SystemRole, as: 'role' }
+          ],
+          attributes: {
+            exclude: ['password', 'created_at', 'updated_at', 'deleted_at']
+          }
+        });
+        User.addScope( 'withPermissions', {
+          include: [
+            { model: db.SystemEndpoint, as: 'permissions' }
+          ],
           attributes: {
             exclude: ['password', 'created_at', 'updated_at', 'deleted_at']
           }

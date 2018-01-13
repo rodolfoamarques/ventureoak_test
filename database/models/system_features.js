@@ -1,8 +1,8 @@
-'use strict'; /* jshint ignore:line */
+'use strict';
 
 module.exports = function( sequelize, Sequelize ) {
 
-  var SystemRole = sequelize.define( 'SystemRole', {
+  var SystemFeature = sequelize.define( 'SystemFeature', {
     id: {
       type: Sequelize.INTEGER,
       primaryKey: true,
@@ -13,12 +13,17 @@ module.exports = function( sequelize, Sequelize ) {
     name: {
       type: Sequelize.STRING,
       allowNull: false,
-      description: 'Name of the role'
+      description: 'Name of the feature'
     },
     description: {
       type: Sequelize.STRING,
       allowNull: false,
-      description: 'Set of permissions for this role'
+      description: 'Description of the feature'
+    },
+    main_endpoint: {
+      type: Sequelize.STRING,
+      allowNull: false,
+      description: 'Main endpoint for the feature'
     },
     created_at: {
       type: Sequelize.DATE,
@@ -36,7 +41,7 @@ module.exports = function( sequelize, Sequelize ) {
     }
 
   }, {
-    tableName: '_system_roles',
+    tableName: '_system_features',
 
     defaultScope: {
       attributes: {
@@ -46,29 +51,22 @@ module.exports = function( sequelize, Sequelize ) {
 
     classMethods: {
       associate: function( db ) {
-        SystemRole.hasMany( db.User, { as: 'users' } );
+        SystemFeature.belongsToMany( db.SystemRole, { as: 'role', through: 'features_roles' } );
+        SystemFeature.hasMany( db.SystemEndpoint, { as: 'endpoints' } );
       }
     },
 
     addScopes: ( db ) => {
-      User.addScope( 'withUsers', {
+      User.addScope( 'withEndpoints', {
         include: [
-          { model: db.User, as: 'users' }
+          { model: db.SystemEndpoint, as: 'endpoints' }
         ],
         attributes: {
-          exclude: ['created_at', 'updated_at', 'deleted_at']
-        }
-      });
-      User.addScope( 'withFeatures', {
-        attributes: {
-          include: [
-            { model: db.SystemFeature, as: 'features' }
-          ],
           exclude: ['created_at', 'updated_at', 'deleted_at']
         }
       });
     }
   });
 
-  return SystemRole;
+  return SystemFeature;
 };

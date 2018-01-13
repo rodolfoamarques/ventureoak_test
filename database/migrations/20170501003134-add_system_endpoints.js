@@ -2,18 +2,36 @@
 
 module.exports = {
   up: function( queryInterface, Sequelize ) {
-    return queryInterface.createTable( '_system_roles', {
+    return queryInterface.createTable( '_system_endpoints', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,
         allowNull: false
       },
+      feature_id: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: {
+            model: '_system_features',
+            key: 'id',
+            onUpdate: 'CASCADE',
+            onDelete: 'RESTRICT'
+          }
+      },
       name: {
         type: Sequelize.STRING,
         allowNull: false
       },
-      description: {
+      method: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      acl: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      endpoint: {
         type: Sequelize.STRING,
         allowNull: false
       },
@@ -30,6 +48,6 @@ module.exports = {
   },
 
   down: function( queryInterface, Sequelize ) {
-    return queryInterface.dropTable( '_system_roles' );
+    return queryInterface.dropTable( '_system_endpoints' );
   }
 };

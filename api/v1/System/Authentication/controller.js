@@ -106,3 +106,8 @@ exports.register = ( request, reply ) =>
       reply( err ) :
       reply( Boom.badImplementation(err) )
   );
+
+
+// This function will verify the credentials of a login request
+// and, if valid, generate a JWT to authenticate the user
+exports.recover = ( request, reply ) => {}
